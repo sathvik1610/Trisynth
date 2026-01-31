@@ -111,6 +111,17 @@ class ExprStmt(Stmt):
     def __repr__(self):
         return f"ExprStmt({self.expression})"
 
+class PrintStmt(Stmt):
+    """
+    Represents a print statement.
+    Example: print(x);
+    """
+    def __init__(self, expression: Expr):
+        self.expression = expression
+
+    def __repr__(self):
+        return f"Print({self.expression})"
+
 class VarDecl(Stmt):
     """
     Represents a variable declaration.

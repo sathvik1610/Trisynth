@@ -7,6 +7,7 @@ Trisynth/
 ├── .git/
 ├── .gitignore             # Git ignore file
 ├── README.md              # Project overview and instructions
+├── requirements.txt       # Python dependencies
 │
 ├── docs/                  # Documentation
 │   ├── folder_structure.md # This file
@@ -16,6 +17,7 @@ Trisynth/
 ├── src/                   # Source Code
 │   ├── frontend/          # Frontend Analysis
 │   │   ├── lexer.py       # Lexical Analysis
+│   │   ├── token_type.py  # Token definitions
 │   │   ├── parser.py      # Syntax Analysis (AST generation)
 │   │   └── ast.py         # AST Node definitions
 │   │

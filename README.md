@@ -139,13 +139,36 @@ minic-compiler/
 - **Assembler:** NASM or GNU Assembler (GAS)
 - **Operating System:** Linux
 
-## How to Run (Lexer Phase)
+## How to Run (Week 2)
 
-1. Place a NanoC source file in the `tests/` directory.
-2. Run the compiler entry point:
+### 1. Run the Compiler (Interactive Mode)
+Run the main entry point without arguments to start the interactive session.
 
 ```bash
-python3 src/main.py
+python -m src.main
+```
+
+### 2. Run the Compiler (File Mode)
+```bash
+python -m src.main path/to/source.nc
+```
+
+### 3. Run Automated Tests
+The project uses `pytest` for verification.
+
+```bash
+python -m pytest
+```
+
+### 3. Usage inside Python
+```python
+from src.frontend.lexer import Lexer
+from src.frontend.parser import Parser
+
+code = "int x = 10;"
+tokens = Lexer(code).tokenize()
+ast = Parser(tokens).parse()
+print(ast)
 ````
 
 3. The lexer outputs the token stream to standard output.
