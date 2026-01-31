@@ -1,0 +1,4 @@
+# Trisynth Compiler Dependencies
+
+# Testing Framework
+pytest==8.0.0
