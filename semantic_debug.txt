@@ -1,0 +1,29 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.0.0, pluggy-1.6.0
+rootdir: D:\GitHub\Custom-Native-Compiler
+collected 1 item
+
+tests\unit\test_semantic.py 
+Caught Exception: Expected type declaration at 3:5
+F
+
+================================== FAILURES ===================================
+________________________ test_type_mismatch_assignment ________________________
+
+    def test_type_mismatch_assignment():
+        source = """
+        int x = 10;
+        x = 3.14;
+        """ # float assigned to int
+        with pytest.raises(Exception) as excinfo:
+            analyze_source(source)
+        print(f"\nCaught Exception: {excinfo.value}")
+>       assert "Cannot assign 'float' to 'int' for variable 'x'" in str(excinfo.value)
+E       assert "Cannot assign 'float' to 'int' for variable 'x'" in 'Expected type declaration at 3:5'
+E        +  where 'Expected type declaration at 3:5' = str(Exception('Expected type declaration at 3:5'))
+E        +    where Exception('Expected type declaration at 3:5') = <ExceptionInfo Exception('Expected type declaration at 3:5') tblen=4>.value
+
+tests\unit\test_semantic.py:33: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/unit/test_semantic.py::test_type_mismatch_assignment - assert "C...
+============================== 1 failed in 0.04s ==============================

@@ -48,5 +48,14 @@ def process_source(source_code):
     for decl in ast.declarations:
         print(f"  {decl}")
 
+    print("\n[3] Semantic Analysis:")
+    from src.semantic.analyzer import SemanticAnalyzer
+    try:
+        analyzer = SemanticAnalyzer()
+        analyzer.analyze(ast)
+        print("  ✅ Passed (No semantic errors)")
+    except Exception as e:
+        print(f"  ❌ Failed: {e}")
+
 if __name__ == "__main__":
     main()
