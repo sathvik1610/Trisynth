@@ -68,5 +68,17 @@ def process_source(source_code):
     except Exception as e:
         print(f"  ❌ Failed: {e}")
 
+    print("\n[5] Optimization (Constant Folding):")
+    from src.optimization.optimizer import Optimizer
+    from src.optimization.constant_fold import ConstantFolding
+    try:
+        optimizer = Optimizer()
+        optimizer.add_pass(ConstantFolding())
+        optimized_ir = optimizer.optimize(ir)
+        for instr in optimized_ir:
+            print(f"  {instr}")
+    except Exception as e:
+        print(f"  ❌ Failed: {e}")
+
 if __name__ == "__main__":
     main()

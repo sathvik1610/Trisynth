@@ -31,8 +31,7 @@ Trisynth/
 │   │
 │   ├── optimization/      # Optimization Passes
 │   │   ├── optimizer.py   # Main optimizer driver
-│   │   ├── constant_fold.py
-│   │   └── dead_code.py
+│   │   └── constant_fold.py # Constant Folding pass
 │   │
 │   ├── backend/           # Backend Synthesis
 │   │   ├── codegen_x86.py # x86-64 Assembly generation
