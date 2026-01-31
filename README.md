@@ -139,7 +139,7 @@ minic-compiler/
 - **Assembler:** NASM or GNU Assembler (GAS)
 - **Operating System:** Linux
 
-## How to Run (Week 2)
+## How to Run
 
 ### 1. Run the Compiler (Interactive Mode)
 Run the main entry point without arguments to start the interactive session.
