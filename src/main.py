@@ -56,6 +56,17 @@ def process_source(source_code):
         print("  ✅ Passed (No semantic errors)")
     except Exception as e:
         print(f"  ❌ Failed: {e}")
+        return # Stop if semantic error
+
+    print("\n[4] Intermediate Representation (IR):")
+    from src.ir.ir_gen import IRGenerator
+    try:
+        ir_gen = IRGenerator()
+        ir = ir_gen.generate(ast)
+        for instr in ir:
+            print(f"  {instr}")
+    except Exception as e:
+        print(f"  ❌ Failed: {e}")
 
 if __name__ == "__main__":
     main()
