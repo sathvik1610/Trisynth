@@ -3,214 +3,115 @@
 **Trisynth** is a custom-built native compiler for **NanoC**, a minimal C-like programming language designed for educational purposes.  
 This project focuses on demonstrating the complete compiler pipeline, from source code analysis to native code generation.
 
----
-
-## Project Overview
-
-The goal of this project is to design and implement a modular compiler that translates NanoC programs into native executable code.  
-The compiler follows a structured, phase-wise architecture inspired by classical compiler design principles.
-
-The compilation pipeline includes:
-- Lexical analysis
-- Syntax analysis
-- Semantic analysis
-- Intermediate Representation (IR) generation
-- IR-level optimizations
-- Native assembly code generation
-
-The compiler generates architecture-specific assembly code, which is assembled into an executable using an external assembler.
+> [!NOTE]
+> **Academic Disclaimer**: Trisynth is a pedagogical compiler built as part of an academic project. Design decisions prioritize understandability and correctness over completeness and performance.
 
 ---
 
-## About NanoC
+## 1. Project Scope & Intent
 
-**NanoC** is a small, statically typed, imperative programming language with a C-like syntax.  
-It is intentionally minimal to ensure that all compiler phases can be implemented completely and correctly within a semester.
-
-### Key Characteristics
-- Integer-only data type
-- Block-structured syntax
-- Explicit variable declarations
-- Simple control flow constructs
-- Single entry point (`main`)
-
-NanoC avoids advanced features such as pointers, arrays, functions, and floating-point arithmetic to reduce complexity and keep the focus on compiler construction.
+The primary goals of Trisynth are:
+*   **Educational**: To serve as a clear reference implementation for compiler construction concepts.
+*   **Full Pipeline**: To demonstrate every stage from Lexing -> Parsing -> Semantics -> IR -> Optimization -> CodeGen.
+*   **Modularity**: To keep each phase distinct and testable (e.g., Lexer and Parser are independent modules).
+*   **Transparency**: To favor readable algorithms (e.g., recursive descent) over complex, highly optimized ones.
 
 ---
 
-## Language Features
+## 2. Non-Goals
 
-- Data Type: `int`
-- Arithmetic operations: `+ - * /`
-- Relational operations: `< > <= >= == !=`
-- Control flow:
-  - `if` / `else`
-  - `while`
-- Built-in output statement: `print`
-- Single program entry point: `main`
+To maintain focus and manage complexity, explicitly **we are NOT aiming for**:
+*   A replacement for GCC or LLVM.
+*   Real-world performance benchmarks.
+*   Compilation of large-scale or safety-critical software.
+*   Full C standard compatibility (ABI or syntax).
 
 ---
 
-## Compiler Architecture
+## 3. Architecture & Implementation
 
-Trisynth is implemented using a **modular architecture**, where each compiler phase is implemented as a separate component.
-
-### Compilation Pipeline
+Trisynth follows a classical multi-pass architecture:
 
 ```
-
-Source Code (NanoC)
-↓
-Lexical Analysis
-↓
-Parsing (AST Generation)
-↓
-Semantic Analysis
-↓
-Intermediate Representation (IR)
-↓
-IR Optimization
-↓
-Assembly Generation
-↓
-Assembler (NASM / GAS)
-↓
-Native Executable
-
+Source Code (NanoC) -> Lexer -> Parser -> AST -> Semantic Analyzer -> IR Gen -> Optimizer -> CodeGen -> Assembly
 ```
+
+### Key Components
+
+#### Language Design (NanoC)
+*   **Type System**: Statically typed (`int`, `bool`, `void`) with no implicit conversions.
+*   **Control Flow**: `if/else`, `while`, but no `switch` or `goto` to simplify CFG construction.
+*   **Functions**: Recursive, pass-by-value, no overloading.
+
+#### Intermediate Representation (IR)
+*   **Design**: Linear Three-Address Code (TAC).
+*   **Trade-off**: We chose linear IR over SSA (Static Single Assignment) to reduce implementation complexity while still allowing for fundamental optimizations.
+
+#### Optimization Strategy
+We implement conservative, local optimizations to ensure semantic safety:
+*   **Constant Folding**: Folds literal expressions (e.g., `1 + 2` -> `3`). Does *not* fold variables to avoid complexity.
+*   **Dead Code Elimination**: Iteratively removes instructions defining unused temporary variables. User variables are generally preserved to maintain observability unless strict local conditions are met.
 
 ---
 
-## Project Structure
+## 4. Limitations & Trade-offs
 
-```
+### Memory & Runtime
+*   **No Heap**: No `malloc`/`free`. Stack allocation only.
+*   **No Garbage Collection**: Not needed for the current scope.
+*   **Safety**: No runtime bounds checking or overflow protection.
 
-minic-compiler/
-│
-├── README.md
-│
-├── docs/
-│   ├── language_spec.md
-│   ├── grammar.md
-│   └── design.md
-│
-├── src/
-│   ├── main.py
-│   │
-│   ├── lexer/
-│   │   ├── tokens.py
-│   │   └── lexer.py
-│   │
-│   ├── parser/
-│   │   └── parser.py
-│   │
-│   ├── ast/
-│   │   └── nodes.py
-│   │
-│   ├── semantic/
-│   │   └── analyzer.py
-│   │
-│   ├── ir/
-│   │   └── ir_generator.py
-│   │
-│   ├── optimizer/
-│   │   └── passes.py
-│   │
-│   └── backend/
-│       └── asm_gen.py
-│
-├── tests/
-│   ├── lexer_test.mc
-│   ├── parser_test.mc
-│   └── sample_program.mc
-│
-└── output/
-├── program.asm
-└── program.out
+### IR & Backend
+*   **Instruction Set**: Simplified set (ADD, SUB, JMP, etc.) sufficient for NanoC but not exhaustive.
+*   **Register Allocation**: Simple strategy (spilling to stack) rather than graph-coloring allocation.
 
-````
+### Error Handling
+*   **Panic Mode**: Compilation stops at the first critical error.
+*   **Diagnostics**: Focus on location (line/col) rather than recovery suggestions.
+
+### Security
+*   **Constraint**: The compiler is not hardened against malformed inputs and provides no sandboxing for generated code.
 
 ---
 
-## Technology Stack
+## 5. Technology Stack
 
-- **Implementation Language:** Python 3
-- **Target Architectures:** x86-64 / RISC-V
-- **Assembler:** NASM or GNU Assembler (GAS)
-- **Operating System:** Linux
+- **Implementation Language:** Python 3 (Chosen for readability and rapid prototyping).
+- **Target Architectures:** x86-64 / RISC-V.
+- **Assembler:** NASM or GNU Assembler (GAS).
+- **Operating System:** Linux / Windows (Cross-platform python logic).
 
-## How to Run (Week 2)
+---
 
-### 1. Run the Compiler (Interactive Mode)
-Run the main entry point without arguments to start the interactive session.
+## 6. How to Run
 
+### Interactive Mode
+Run the compiler shell to type code and see all phases (Tokens -> AST -> Semantics -> IR -> Optimization).
 ```bash
 python -m src.main
 ```
 
-### 2. Run the Compiler (File Mode)
+### File Mode
+Compile a source file.
 ```bash
 python -m src.main path/to/source.nc
 ```
 
-### 3. Run Automated Tests
-The project uses `pytest` for verification.
-
+### Automated Tests
+Run the `pytest` suite verification.
 ```bash
 python -m pytest
 ```
 
-### 3. Usage inside Python
-```python
-from src.frontend.lexer import Lexer
-from src.frontend.parser import Parser
-
-code = "int x = 10;"
-tokens = Lexer(code).tokenize()
-ast = Parser(tokens).parse()
-print(ast)
-````
-
-3. The lexer outputs the token stream to standard output.
-
 ---
 
-## Example NanoC Program
+## 7. Future Work
 
-```c
-int main() {
-    int x = 5;
-    int y = 10;
-    int z = x + y;
-    print(z);
-}
-```
-
----
-
-## Design Philosophy
-
-The NanoC language and Trisynth compiler are intentionally minimal.
-The focus of the project is not on language richness, but on **clarity, correctness, and completeness of the compiler pipeline**.
-
-This approach ensures:
-
-* Clear demonstration of compiler concepts
-* Manageable implementation complexity
-* Strong alignment with compiler theory taught in class
-
----
-
-## Future Extensions
-
-The modular design of Trisynth allows for potential future extensions, such as:
-
-* Additional optimization passes
-* Support for functions
-* Alternative backend targets
-* Transpilation to high-level languages
-
-These features are not part of the current scope.
+While not in the current scope, future extensions could include:
+*   **SSA Conversion**: For more aggressive optimizations.
+*   **Control Flow Graph (CFG)**: To enable global data-flow analysis.
+*   **Register Allocation**: Implementing Linear Scan or Graph Coloring.
+*   **New Backends**: Support for LLVM IR output.
 
 ---
 
@@ -219,7 +120,3 @@ These features are not part of the current scope.
 * V. Chitraksh (CS23B054)
 * P. Sathvik (CS23B042)
 * S. Danish Dada (CS23B047)
-
-
-
-

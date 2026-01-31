@@ -142,3 +142,9 @@ func_decl   ::= type IDENTIFIER ( param_list ) block
 block       ::= { stmt_list }
 stmt        ::= expr_stmt | if_stmt | while_stmt | for_stmt | return_stmt | break ; | continue ;
 ```
+
+---
+
+## 10. Optimization Semantics
+
+For optimization purposes, variables that are neither printed nor returned are considered unobservable within a function. This allows the compiler to perform aggressive dead code elimination on local variables that do not contribute to the program's observable output.
