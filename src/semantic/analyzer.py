@@ -13,6 +13,8 @@ class SemanticAnalyzer:
     """
     def __init__(self):
         self.symbol_table = SymbolTable()
+        self.loop_depth = 0
+        self.symbol_table.define('readInt', 'int', category='function')
 
     def visit(self, node: ast.ASTNode):
         """Generic visitor dispatcher."""
@@ -31,8 +33,39 @@ class SemanticAnalyzer:
     # --- Visitor Methods ---
 
     def visit_Program(self, node: ast.Program):
+        # Pass 1: Register all function signatures (Hoisting)
         for decl in node.declarations:
-            self.visit(decl)
+            if isinstance(decl, ast.FunctionDecl):
+                try:
+                    self.symbol_table.define(decl.name, decl.return_type, category='function')
+                except:
+                     pass # Already defined? Error handled deeped or ignore duplicate in pass 1? 
+                     # Analyzer logic usually stops at first error. 
+                     # If generic define raises, we should let it raise if it's a real redefinition.
+                     # But visit_FunctionDecl (Pass 2) will also define.
+                     # We must make definition idempotent or check existance.
+                     # Let's change visit_FunctionDecl to NOT define if already consistent.
+                     raise
+
+        # Pass 2: Analyze Bodies and Variables
+        for decl in node.declarations:
+            if isinstance(decl, ast.FunctionDecl):
+                # Function symbol already defined. Check consistency?
+                # Just enter scope and process params/body.
+                # We need to manually replicate visit_FunctionDecl logic minus the define() part.
+                # Or we modify define() to allow redefinition of same type/category?
+                # Let's manually do it here to avoid changing SymbolTable too much.
+                
+                # 3. Define params
+                self.symbol_table.enter_scope()
+                for type_name, param_name in decl.params:
+                    self.symbol_table.define(param_name, type_name, category='variable')
+                
+                # 4. Visit body
+                self.visit(decl.body)
+                self.symbol_table.exit_scope()
+            else:
+                self.visit(decl)
 
     def visit_VarDecl(self, node: ast.VarDecl):
         # 1. Check initializer type (if exists)
@@ -42,7 +75,7 @@ class SemanticAnalyzer:
                 raise Exception(f"Type Error: Cannot assign '{init_type}' to '{node.type_name}' for variable '{node.name}'.")
         
         # 2. Define in symbol table
-        self.symbol_table.define(node.name, node.type_name, category='variable')
+        self.symbol_table.define(node.name, node.type_name, category='variable', is_const=node.is_const)
 
     def visit_FunctionDecl(self, node: ast.FunctionDecl):
         # 1. Define function in CURRENT scope (for recursion/calling)
@@ -96,10 +129,12 @@ class SemanticAnalyzer:
             self.visit(node.else_branch)
 
     def visit_WhileStmt(self, node: ast.WhileStmt):
+        self.loop_depth += 1
         cond_type = self.visit(node.condition)
         if cond_type not in ('bool', 'int'):
             raise Exception(f"Type Error: While condition must be bool or int, got '{cond_type}'.")
         self.visit(node.body)
+        self.loop_depth -= 1
 
     def visit_ReturnStmt(self, node: ast.ReturnStmt):
         # TODO: Check against enclosing function return type.
@@ -150,13 +185,31 @@ class SemanticAnalyzer:
         symbol = self.symbol_table.resolve(node.name)
         if not symbol:
             raise Exception(f"Semantic Error: Undeclared variable '{node.name}'.")
-            
+        
+        if symbol.is_const:
+             raise Exception(f"Semantic Error: Cannot assign to const variable '{node.name}'.")
+
         value_type = self.visit(node.value)
         
         if symbol.type_name != value_type:
             raise Exception(f"Type Error: Cannot assign '{value_type}' to '{symbol.type_name}' for variable '{node.name}'.")
             
         return value_type # Assignment evaluates to the value
+
+    def visit_UnaryExpr(self, node: ast.UnaryExpr) -> str:
+        operand_type = self.visit(node.operand)
+        
+        # Handle INCREMENT/DECREMENT checks
+        if node.operator.name in ('INCREMENT', 'DECREMENT'):
+             if operand_type != 'int':
+                  raise Exception(f"Type Error: Increment/Decrement requires 'int', got '{operand_type}'.")
+             # Check mutability
+             if isinstance(node.operand, ast.Variable):
+                  sym = self.symbol_table.resolve(node.operand.name)
+                  if sym and sym.is_const:
+                       raise Exception(f"Semantic Error: Cannot increment/decrement const variable '{node.operand.name}'.")
+        
+        return operand_type
 
     def visit_CallExpr(self, node: ast.CallExpr) -> str:
         symbol = self.symbol_table.resolve(node.callee)
@@ -171,3 +224,78 @@ class SemanticAnalyzer:
         # Need to extend Symbol to store param types for full checking.
         
         return symbol.type_name
+    def visit_ArrayDecl(self, node: ast.ArrayDecl):
+        # type_name is element type (e.g. 'int')
+        # We store the variable as 'int[]' to distinguish it
+        array_type = node.type_name + "[]"
+        self.symbol_table.define(node.name, array_type, category='variable')
+
+    def visit_ArrayAccess(self, node: ast.ArrayAccess) -> str:
+        symbol = self.symbol_table.resolve(node.name)
+        if not symbol:
+            raise Exception(f"Semantic Error: Undeclared array '{node.name}'.")
+        
+        if not symbol.type_name.endswith("[]"):
+            raise Exception(f"Type Error: '{node.name}' is not an array.")
+            
+        index_type = self.visit(node.index)
+        if index_type != 'int':
+            raise Exception(f"Type Error: Array index must be int, got '{index_type}'.")
+            
+        return symbol.type_name[:-2] # Return base type (e.g. 'int')
+
+    def visit_ArrayAssignment(self, node: ast.ArrayAssignment) -> str:
+        symbol = self.symbol_table.resolve(node.name)
+        if not symbol:
+            raise Exception(f"Semantic Error: Undeclared array '{node.name}'.")
+            
+        if not symbol.type_name.endswith("[]"):
+            raise Exception(f"Type Error: '{node.name}' is not an array.")
+            
+        index_type = self.visit(node.index)
+        if index_type != 'int':
+             raise Exception(f"Type Error: Array index must be int, got '{index_type}'.")
+             
+        value_type = self.visit(node.value)
+        base_type = symbol.type_name[:-2]
+        
+        if value_type != base_type:
+            raise Exception(f"Type Error: Cannot assign '{value_type}' to '{base_type}' array element.")
+            
+        return value_type
+
+    def visit_ForStmt(self, node: ast.ForStmt):
+        self.symbol_table.enter_scope()
+        self.loop_depth += 1
+        
+        if node.init:
+            self.visit(node.init)
+        
+        if node.condition:
+            cond_type = self.visit(node.condition)
+            if cond_type != 'bool':
+                 raise Exception(f"Type Error: For condition must be bool, got '{cond_type}'.")
+        
+        if node.update:
+            self.visit(node.update)
+            
+        self.visit(node.body)
+        
+        self.loop_depth -= 1
+        self.symbol_table.exit_scope()
+
+    def visit_BreakStmt(self, node: ast.BreakStmt):
+        if self.loop_depth == 0:
+            raise Exception("Semantic Error: 'break' outside of loop.")
+
+    def visit_ContinueStmt(self, node: ast.ContinueStmt):
+        if self.loop_depth == 0:
+            raise Exception("Semantic Error: 'continue' outside of loop.")
+
+    def visit_LogicalExpr(self, node: ast.LogicalExpr) -> str:
+        left_type = self.visit(node.left)
+        right_type = self.visit(node.right)
+        
+        if left_type != 'bool' or right_type != 'bool':
+             raise Exception(f"Type Error: Logical operators require bool operands, got '{left_type}' and '{right_type}'.")
+        return 'bool'

@@ -110,6 +110,7 @@ class Lexer:
             "readInt": TokenType.KW_READ_INT,
             "true": TokenType.KW_TRUE,
             "false": TokenType.KW_FALSE,
+            "const": TokenType.KW_CONST,
         }
 
         # List of (Regex Pattern, TokenType OR None for complex handling)

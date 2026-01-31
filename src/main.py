@@ -67,6 +67,7 @@ def process_source(source_code):
             print(f"  {instr}")
     except Exception as e:
         print(f"  ❌ Failed: {e}")
+        return
 
     print("\n[5] Optimization (Constant Folding & Dead Code Elimination):")
     from src.optimization.optimizer import Optimizer

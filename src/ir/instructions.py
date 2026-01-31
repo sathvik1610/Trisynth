@@ -10,11 +10,15 @@ class OpCode(Enum):
     ADD = auto()   # ADD dest, src1, src2
     SUB = auto()   # SUB dest, src1, src2
     MUL = auto()   # MUL dest, src1, src2
+
     DIV = auto()   # DIV dest, src1, src2
+    MOD = auto()   # MOD dest, src1, src2
     
     # Relational
     LT = auto()    # LT dest, src1, src2
     GT = auto()    # GT dest, src1, src2
+    LTE = auto()   # LTE dest, src1, src2
+    GTE = auto()   # GTE dest, src1, src2
     EQ = auto()    # EQ dest, src1, src2
     NEQ = auto()   # NEQ dest, src1, src2
     
@@ -27,8 +31,14 @@ class OpCode(Enum):
     FUNC_START = auto()  # FUNC_START name
     FUNC_END = auto()    # FUNC_END name
     RETURN = auto()      # RETURN [val]
-    CALL = auto()        # CALL dest, func_name, [args...]
+    # CALL dest, func_name, NumArgs. Args must be passed via PARAM before.
+    CALL = auto()        
+    PARAM = auto()       # PARAM val (push argument)
     
+    # Memory / Arrays
+    ALOAD = auto()     # ALOAD dest, array_name, index
+    ASTORE = auto()    # ASTORE array_name, index, src_val
+
     # I/O
     PRINT = auto()       # PRINT src
 

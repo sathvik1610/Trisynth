@@ -40,46 +40,84 @@ Source Code (NanoC) -> Lexer -> Parser -> AST -> Semantic Analyzer -> IR Gen -> 
 
 #### Language Design (NanoC)
 *   **Type System**: Statically typed (`int`, `bool`, `void`) with no implicit conversions.
-*   **Control Flow**: `if/else`, `while`, but no `switch` or `goto` to simplify CFG construction.
-*   **Functions**: Recursive, pass-by-value, no overloading.
+*   **Control Flow**: `if/else`, `while`, `for`, `break`, `continue`. (Note: No `switch` or `goto`).
+*   **Functions**: Recursive, pass-by-value, no overloading. Supports **Hoisting** (Forward Declarations).
+*   **Data Structures**: 
+    *   **Arrays**: Fixed-size homogeneous arrays (e.g., `int arr[10]`). 
+    *   *Constraint*: No pointers, no dynamic allocation (`malloc`).
+*   **Safety**:
+    *   **Immutable Constants**: `const` keyword strictly enforced.
+    *   **Operators**: `++`, `--` provided as valid syntax sugar.
 
 #### Intermediate Representation (IR)
 *   **Design**: Linear Three-Address Code (TAC).
 *   **Trade-off**: We chose linear IR over SSA (Static Single Assignment) to reduce implementation complexity while still allowing for fundamental optimizations.
 
-#### Optimization Strategy
-We implement conservative, local optimizations to ensure semantic safety:
-*   **Constant Folding**: Folds literal expressions (e.g., `1 + 2` -> `3`). Does *not* fold variables to avoid complexity.
-*   **Dead Code Elimination**: Iteratively removes instructions defining unused temporary variables. User variables are generally preserved to maintain observability unless strict local conditions are met.
+---
+
+## 4. Optimization Strategy & Design Philosophy
+
+Trisynth implements **conservative, semantics-preserving optimizations** over a linear Intermediate Representation (IR). The goal is to demonstrate classical compiler techniques while avoiding transformations that require complex control-flow or interprocedural analysis.
+
+### Implemented Optimizations
+
+**1. Constant Folding & Propagation**
+
+* Evaluates arithmetic expressions with **compile-time constant operands**.
+* Example:
+  ```
+  (10 * 10 + 44) / 12 → 12
+  ```
+* Folding is performed **only when all operands are literals**.
+* **Constant Propagation**: Substitutes known constant values across basic blocks (safely guarded by labels).
+* No algebraic simplification involving variables (e.g., `x + 0`).
+
+**2. Dead Code Elimination (DCE)**
+
+* Removes computations whose results are never used.
+* Primarily targets **compiler-generated temporaries (`tX`)**.
+* Instructions with side effects (`PRINT`, `CALL`, `ASTORE`, `RETURN`) are never removed.
+
+### Optimization Constraints (Very Important)
+
+To ensure correctness, the optimizer enforces strict safety rules:
+
+* No optimizations are applied across loop boundaries (Basic Block Isolation).
+* Loop induction variables are never folded or removed.
+* Branch conditions are preserved unless provably constant within the block.
+* Memory operations (`ALOAD`, `ASTORE`) are treated as side-effecting.
+* No instruction referenced by a jump or label is removed.
+
+These constraints prevent unsafe transformations in the absence of a Control Flow Graph (CFG).
 
 ---
 
-## 4. Limitations & Trade-offs
+## 5. Limitations & Trade-offs (Detailed)
 
-### Memory & Runtime
-*   **No Heap**: No `malloc`/`free`. Stack allocation only.
-*   **No Garbage Collection**: Not needed for the current scope.
-*   **Safety**: No runtime bounds checking or overflow protection.
+This section explicitly lists what is *not* supported and why, to manage expectations.
 
-### IR & Backend
-*   **Instruction Set**: Simplified set (ADD, SUB, JMP, etc.) sufficient for NanoC but not exhaustive.
+### A. Language Features
+*   **Arrays**: 
+    *   Must have compile-time fixed size (`int x[10]`).
+    *   No dynamic arrays.
+    *   No pointer arithmetic (`*(p+1)` is not supported).
+    *   Passed by reference logic in IR (pointer), but syntax is restricted.
+*   **Structs/Classes**: No user-defined types.
+*   **Floating Point**: `float` is a reserved keyword but full backend support is limited to integer arithmetic in this phase.
+
+### B. Safety & Runtime
+*   **No Bounds Checking**: Accessing `arr[100]` for a size-10 array **will compile** and generate an `ASTORE` instruction. At runtime, this leads to undefined behavior (memory corruption). We rely on the programmer to check bounds.
+*   **No Garbage Collection**: Stack allocation only.
+*   **No Null Safety**: Variables are generally initialized, but uninitialized reads are undefined.
+*   **Error Handling**: The compiler operates in "panic mode" — it halts execution at the **first** syntax or semantic error encountered.
+
+### C. Backend & Optimization Details
+*   **Instruction Set**: Simplified set (ADD, SUB, JMP, ALOAD, ASTORE, etc.).
+*   **Global DCE**: Not implemented. Unused function definitions are *not* stripped from the output.
 *   **Register Allocation**: Simple strategy (spilling to stack) rather than graph-coloring allocation.
-
-### Error Handling
-*   **Panic Mode**: Compilation stops at the first critical error.
-*   **Diagnostics**: Focus on location (line/col) rather than recovery suggestions.
-
-### Security
-*   **Constraint**: The compiler is not hardened against malformed inputs and provides no sandboxing for generated code.
-
----
-
-## 5. Technology Stack
-
-- **Implementation Language:** Python 3 (Chosen for readability and rapid prototyping).
-- **Target Architectures:** x86-64 / RISC-V.
-- **Assembler:** NASM or GNU Assembler (GAS).
-- **Operating System:** Linux / Windows (Cross-platform python logic).
+*   **Built-ins**: 
+    *   `print(expr)`: Output integer to stdout.
+    *   `readInt()`: Input integer from stdin (stubbed in analysis).
 
 ---
 
@@ -108,10 +146,10 @@ python -m pytest
 ## 7. Future Work
 
 While not in the current scope, future extensions could include:
+*   **Runtime Bounds Checks**: Injecting `check_bounds` instructions before `ALOAD`/`ASTORE`.
 *   **SSA Conversion**: For more aggressive optimizations.
 *   **Control Flow Graph (CFG)**: To enable global data-flow analysis.
 *   **Register Allocation**: Implementing Linear Scan or Graph Coloring.
-*   **New Backends**: Support for LLVM IR output.
 
 ---
 

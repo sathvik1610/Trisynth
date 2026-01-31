@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 import src.frontend.ast as ast
 from src.ir.instructions import Instruction, OpCode
 
@@ -15,6 +15,10 @@ class IRGenerator:
         # Stack of dicts: {source_name: unique_ir_name}
         self.scopes = [{}] 
         self._var_counter = 0
+
+        # Loop Control Stack for break/continue
+        # Stack of tuples: (continue_label, break_label)
+        self.loop_stack = []
 
     def generate(self, program: ast.Program) -> List[Instruction]:
         self.visit(program)
@@ -54,9 +58,9 @@ class IRGenerator:
         instr = Instruction(opcode, arg1, arg2, result)
         self.instructions.append(instr)
 
-    def visit(self, node: ast.ASTNode) -> str:
+    def visit(self, node: ast.ASTNode) -> Union[str, int, float]:
         """
-        Generic visitor. Returns the name of the variable/temp holding the result (if any).
+        Generic visitor. Returns the name of the variable/temp holding the result (if any) OR a literal value.
         """
         method_name = f'visit_{type(node).__name__}'
         visitor = getattr(self, method_name, self.generic_visit)
@@ -73,45 +77,35 @@ class IRGenerator:
 
     def visit_VarDecl(self, node: ast.VarDecl):
         # int x = 10; -> MOV x_N, 10
-        
-        # 1. Generate unique name for this declaration
         unique_name = self._get_unique_name(node.name)
-        
-        # 2. Register in current scope
         self.scopes[-1][node.name] = unique_name
         
         if node.initializer:
             value_src = self.visit(node.initializer)
             self._emit(OpCode.MOV, arg1=value_src, result=unique_name)
-        else:
-            # Optional: Emit a zero-init or just leave it. 
-            # For safety/debug in IR, maybe good to know it exists? 
-            # But strictly MOV is enough when assigned.
-            pass
+
+    def visit_ArrayDecl(self, node: ast.ArrayDecl):
+        # int x[10]; -> Just register unique name or emit alloc?
+        # Since we don't have malloc, and stack is implicit, 
+        # we treat 'x' as base pointer/name.
+        unique_name = self._get_unique_name(node.name)
+        self.scopes[-1][node.name] = unique_name
+        # Optional: Emit ARR_DECL x_N size (for backend stack alloc info)
+        # self._emit(OpCode.ARR_DECL, arg1=node.size, result=unique_name)
+        # For our simple IR, ALOAD/ASTORE will just use unique_name.
+        pass
 
     def visit_FunctionDecl(self, node: ast.FunctionDecl):
         self._emit(OpCode.FUNC_START, arg1=node.name)
-        
         self._enter_scope()
         
-        # Handle parameters (register them in scope)
         for _, param_name in node.params:
             unique_name = self._get_unique_name(param_name)
             self.scopes[-1][param_name] = unique_name
-            # Note: In a real compiler, we'd emit instructions to move args from registers/stack 
-            # to these locals. For this IR, we assume they are set.
 
-        # We visit the body block manually to avoid double scope entry if visit_Block does it
-        # But visit_Block handles scope...
-        # Let's inspect visit_Block node structure. 
-        # AST FunctionDecl has 'body' which is a Block.
-        # If we visit(node.body), visit_Block will enter another scope. 
-        # That's fine (function scope + block scope), or we can just delegate.
         self.visit(node.body) 
-        
         self._exit_scope()
         
-        # Implicit return for void functions if missing
         if self.instructions[-1].opcode != OpCode.RETURN:
              self._emit(OpCode.FUNC_END, arg1=node.name)
 
@@ -122,7 +116,6 @@ class IRGenerator:
         self._exit_scope()
 
     def visit_IfStmt(self, node: ast.IfStmt):
-        # ... (same logic, just using visit which uses resolve) ...
         cond_temp = self.visit(node.condition)
         
         label_else = self._new_label() if node.else_branch else None
@@ -144,8 +137,10 @@ class IRGenerator:
         label_start = self._new_label()
         label_end = self._new_label()
 
+        # Push to loop stack: (continue_target, break_target)
+        self.loop_stack.append((label_start, label_end))
+
         self._emit(OpCode.LABEL, arg1=label_start)
-        
         cond_temp = self.visit(node.condition)
         self._emit(OpCode.JMP_IF_FALSE, arg1=cond_temp, arg2=label_end)
 
@@ -153,6 +148,53 @@ class IRGenerator:
         self._emit(OpCode.JMP, arg1=label_start)
 
         self._emit(OpCode.LABEL, arg1=label_end)
+        self.loop_stack.pop()
+
+    def visit_ForStmt(self, node: ast.ForStmt):
+        # for (init; cond; update) body
+        # Scope for init variable? 
+        # C99 allows int i=0 inside for. So we should enter scope.
+        self._enter_scope()
+        
+        if node.init:
+            self.visit(node.init) # Decl or ExprStmt
+
+        label_start = self._new_label() # Check condition
+        label_update = self._new_label() # Increment
+        label_end = self._new_label()   # Exit
+
+        self.loop_stack.append((label_update, label_end))
+
+        self._emit(OpCode.LABEL, arg1=label_start)
+        
+        if node.condition:
+            cond_temp = self.visit(node.condition)
+            self._emit(OpCode.JMP_IF_FALSE, arg1=cond_temp, arg2=label_end)
+        
+        self.visit(node.body)
+
+        self._emit(OpCode.LABEL, arg1=label_update)
+        if node.update:
+            self.visit(node.update)
+        
+        self._emit(OpCode.JMP, arg1=label_start)
+        
+        self._emit(OpCode.LABEL, arg1=label_end)
+        
+        self.loop_stack.pop()
+        self._exit_scope()
+
+    def visit_BreakStmt(self, node: ast.BreakStmt):
+        if not self.loop_stack:
+            raise Exception("IR Gen Error: Break outside loop.")
+        _, label_break = self.loop_stack[-1]
+        self._emit(OpCode.JMP, arg1=label_break)
+
+    def visit_ContinueStmt(self, node: ast.ContinueStmt):
+        if not self.loop_stack:
+            raise Exception("IR Gen Error: Continue outside loop.")
+        label_continue, _ = self.loop_stack[-1]
+        self._emit(OpCode.JMP, arg1=label_continue)
 
     def visit_ReturnStmt(self, node: ast.ReturnStmt):
         val = None
@@ -169,12 +211,117 @@ class IRGenerator:
 
     # --- Expressions ---
 
-    def visit_Literal(self, node: ast.Literal) -> str:
+    def visit_Literal(self, node: ast.Literal) -> Union[str, int, float]:
+        if isinstance(node.value, bool):
+            return 1 if node.value else 0
         return node.value
 
     def visit_Variable(self, node: ast.Variable) -> str:
-        # Resolve source name to unique IR name
         return self._resolve(node.name)
+        
+    def visit_ArrayAccess(self, node: ast.ArrayAccess) -> str:
+        array_name = self._resolve(node.name)
+        index_val = self.visit(node.index)
+        result = self._new_temp()
+        self._emit(OpCode.ALOAD, arg1=array_name, arg2=index_val, result=result)
+        return result
+
+    def visit_ArrayAssignment(self, node: ast.ArrayAssignment) -> str:
+        array_name = self._resolve(node.name)
+        index_val = self.visit(node.index)
+        value_val = self.visit(node.value)
+        self._emit(OpCode.ASTORE, arg1=array_name, arg2=index_val, result=value_val) # ASTORE arr, idx, val (result field reused for val)
+        return value_val
+
+    def visit_CallExpr(self, node: ast.CallExpr) -> str:
+        # Evaluate arguments
+        arg_temp_names = []
+        for arg in node.args:
+            arg_temp_names.append(self.visit(arg))
+            
+        # Push arguments (PARAM)
+        for temp_name in arg_temp_names:
+            self._emit(OpCode.PARAM, arg1=temp_name)
+            
+        result = self._new_temp()
+        # CALL func_name, num_args -> result
+        self._emit(OpCode.CALL, arg1=node.callee, arg2=len(node.args), result=result)
+        return result
+
+    def visit_LogicalExpr(self, node: ast.LogicalExpr) -> str:
+        # Short-circuit logic: a && b
+        # t = 0 (false)
+        # if !a jmp end
+        # if !b jmp end
+        # t = 1 (true)
+        # label end
+        
+        # Actually, simpler:
+        # result = new_temp()
+        # MOV result, 0
+        
+        label_true = self._new_label()
+        label_false = self._new_label()
+        label_end = self._new_label()
+        
+        left = self.visit(node.left)
+        
+        if node.operator.name == 'AND':
+             # if !left jmp false (actually false/end same here)
+             # simpler: 
+             # MOV result 0
+             # JMP_IF_FALSE left, end
+             # right = visit(right)
+             # JMP_IF_FALSE right, end
+             # MOV result 1
+             # LABEL end
+             
+             result = self._new_temp()
+             self._emit(OpCode.MOV, arg1=0, result=result)
+             self._emit(OpCode.JMP_IF_FALSE, arg1=left, arg2=label_end)
+             
+             right = self.visit(node.right)
+             self._emit(OpCode.JMP_IF_FALSE, arg1=right, arg2=label_end)
+             
+             self._emit(OpCode.MOV, arg1=1, result=result)
+             self._emit(OpCode.LABEL, arg1=label_end)
+             return result
+             
+        elif node.operator.name == 'OR':
+             # MOV result 1
+             # JMP_IF_FALSE left, check_right
+             # JMP end (it was true)
+             # LABEL check_right
+             # JMP_IF_FALSE right, set_false
+             # JMP end (it was true)
+             # LABEL set_false
+             # MOV result 0
+             # LABEL end
+             
+             result = self._new_temp()
+             self._emit(OpCode.MOV, arg1=1, result=result)
+             
+             label_check_right = self._new_label()
+             label_set_false = self._new_label()
+             
+             # If left is FALSE, we must check right.
+             self._emit(OpCode.JMP_IF_FALSE, arg1=left, arg2=label_check_right)
+             # Left was true -> result is 1, jump to end
+             self._emit(OpCode.JMP, arg1=label_end)
+             
+             self._emit(OpCode.LABEL, arg1=label_check_right)
+             right = self.visit(node.right)
+             self._emit(OpCode.JMP_IF_FALSE, arg1=right, arg2=label_set_false)
+             # Right was true -> result is 1, jump to end
+             self._emit(OpCode.JMP, arg1=label_end)
+             
+             self._emit(OpCode.LABEL, arg1=label_set_false)
+             self._emit(OpCode.MOV, arg1=0, result=result)
+             
+             self._emit(OpCode.LABEL, arg1=label_end)
+             return result
+             
+        raise Exception(f"IR Gen Error: Unknown logical op {node.operator.name}")
 
     def visit_BinaryExpr(self, node: ast.BinaryExpr) -> str:
         left = self.visit(node.left)
@@ -184,8 +331,9 @@ class IRGenerator:
         
         op_map = {
             'PLUS': OpCode.ADD, 'MINUS': OpCode.SUB, 
-            'STAR': OpCode.MUL, 'SLASH': OpCode.DIV,
-            'LT': OpCode.LT, 'GT': OpCode.GT, 'EQ': OpCode.EQ, 'NEQ': OpCode.NEQ
+            'STAR': OpCode.MUL, 'SLASH': OpCode.DIV, 'MODULO': OpCode.MOD,
+            'LT': OpCode.LT, 'GT': OpCode.GT, 'LTE': OpCode.LTE, 'GTE': OpCode.GTE,
+            'EQ': OpCode.EQ, 'NEQ': OpCode.NEQ
         }
         
         opcode = op_map.get(node.operator.name)
@@ -193,7 +341,51 @@ class IRGenerator:
             raise Exception(f"IR Gen Error: Unsupported binary operator {node.operator.name}")
             
         self._emit(opcode, arg1=left, arg2=right, result=temp)
+
         return temp
+
+    def visit_UnaryExpr(self, node: ast.UnaryExpr) -> str:
+        if node.operator.name == 'MINUS':
+            operand = self.visit(node.operand)
+            result = self._new_temp()
+            # 0 - operand
+            self._emit(OpCode.SUB, arg1=0, arg2=operand, result=result)
+            return result
+        elif node.operator.name == 'NOT':
+             # !operand -> (operand == 0)
+             operand = self.visit(node.operand)
+             result = self._new_temp()
+             self._emit(OpCode.EQ, arg1=operand, arg2=0, result=result)
+             return result
+        elif node.operator.name == 'INCREMENT':
+             # Only for ArrayAccess here (Variables expanded)
+             if isinstance(node.operand, ast.ArrayAccess):
+                 arr_name = self._resolve(node.operand.name)
+                 idx_val = self.visit(node.operand.index)
+                 val = self._new_temp()
+                 self._emit(OpCode.ALOAD, arg1=arr_name, arg2=idx_val, result=val)
+                 
+                 new_val = self._new_temp()
+                 self._emit(OpCode.ADD, arg1=val, arg2=1, result=new_val)
+                 
+                 self._emit(OpCode.ASTORE, arg1=arr_name, arg2=idx_val, result=new_val)
+                 return new_val
+             raise Exception("IR Gen: ++/-- only supported on vars or arrays.")
+        elif node.operator.name == 'DECREMENT':
+             if isinstance(node.operand, ast.ArrayAccess):
+                 arr_name = self._resolve(node.operand.name)
+                 idx_val = self.visit(node.operand.index)
+                 val = self._new_temp()
+                 self._emit(OpCode.ALOAD, arg1=arr_name, arg2=idx_val, result=val)
+                 
+                 new_val = self._new_temp()
+                 self._emit(OpCode.SUB, arg1=val, arg2=1, result=new_val)
+                 
+                 self._emit(OpCode.ASTORE, arg1=arr_name, arg2=idx_val, result=new_val)
+                 return new_val
+             raise Exception("IR Gen: ++/-- only supported on vars or arrays.")
+        
+        raise Exception(f"IR Gen Error: Unsupported unary operator {node.operator.name}")
 
     def visit_Assignment(self, node: ast.Assignment) -> str:
         value = self.visit(node.value)
