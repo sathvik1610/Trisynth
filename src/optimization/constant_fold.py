@@ -49,6 +49,7 @@ class ConstantFolding:
         # We only look for arithmetic ops: ADD, SUB, MUL, DIV, MOD
         # Relational ops could also be folded (True/False or 1/0)
         if instr.opcode not in (OpCode.ADD, OpCode.SUB, OpCode.MUL, OpCode.DIV, OpCode.MOD,
+                                OpCode.LSHIFT, OpCode.RSHIFT,
                                 OpCode.LT, OpCode.GT, OpCode.LTE, OpCode.GTE, OpCode.EQ, OpCode.NEQ):
             return instr
 
@@ -77,6 +78,8 @@ class ConstantFolding:
             if isinstance(v1, int) and isinstance(v2, int): return v1 // v2
             return v1 / v2
         elif opcode == OpCode.MOD: return v1 % v2
+        elif opcode == OpCode.LSHIFT: return int(v1) << int(v2)
+        elif opcode == OpCode.RSHIFT: return int(v1) >> int(v2)
         # Relational (Bool as Int 1/0)
         elif opcode == OpCode.LT: return 1 if v1 < v2 else 0
         elif opcode == OpCode.GT: return 1 if v1 > v2 else 0

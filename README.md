@@ -57,38 +57,30 @@ Source Code (NanoC) -> Lexer -> Parser -> AST -> Semantic Analyzer -> IR Gen -> 
 
 ## 4. Optimization Strategy & Design Philosophy
 
-Trisynth implements **conservative, semantics-preserving optimizations** over a linear Intermediate Representation (IR). The goal is to demonstrate classical compiler techniques while avoiding transformations that require complex control-flow or interprocedural analysis.
+Trisynth prioritizes **semantic correctness** and **conservative optimization** over aggressive performance tuning. The compiler avoids transformations needing data-flow analysis, CFG construction, or SSA form.
 
 ### Implemented Optimizations
 
-**1. Constant Folding & Propagation**
-
-* Evaluates arithmetic expressions with **compile-time constant operands**.
-* Example:
-  ```
-  (10 * 10 + 44) / 12 → 12
-  ```
-* Folding is performed **only when all operands are literals**.
-* **Constant Propagation**: Substitutes known constant values across basic blocks (safely guarded by labels).
-* No algebraic simplification involving variables (e.g., `x + 0`).
+**1. Scope-Aware Constant Folding & Propagation**
+*   Evaluates arithmetic expressions with **compile-time constant operands**.
+*   **Scope Sensitivity**: Inner-scope variables may be folded independently of outer shadowed variables. (No global propagation).
+*   **Constraints**: Works only when all operands are literals within the basic block. No algebraic simplification (e.g. `x+y-y` is not simplified).
 
 **2. Dead Code Elimination (DCE)**
+*   Removes computations whose results are never used.
+*   **Conservative**: Only unused compiler-generated temporaries (`tX`) are guaranteed removed. Instructions with side effects (`PRINT`, `CALL`, `ASTORE`, `RETURN`) are strictly preserved.
 
-* Removes computations whose results are never used.
-* Primarily targets **compiler-generated temporaries (`tX`)**.
-* Instructions with side effects (`PRINT`, `CALL`, `ASTORE`, `RETURN`) are never removed.
+**3. Strength Reduction**
+*   Replaces expensive arithmetic with cheaper operations:
+    *   Multiplication by powers of two (`i * 4` → `i << 2`)
+    *   Division by powers of two (`k / 2` → `k >> 1`)
+    *   Zero Multiplication (`x * 0` → `0`)
+*   **Assumptions**: Integer arithmetic, non-negative operands (logical shift behavior for unsigned).
 
-### Optimization Constraints (Very Important)
-
-To ensure correctness, the optimizer enforces strict safety rules:
-
-* No optimizations are applied across loop boundaries (Basic Block Isolation).
-* Loop induction variables are never folded or removed.
-* Branch conditions are preserved unless provably constant within the block.
-* Memory operations (`ALOAD`, `ASTORE`) are treated as side-effecting.
-* No instruction referenced by a jump or label is removed.
-
-These constraints prevent unsafe transformations in the absence of a Control Flow Graph (CFG).
+### Safety Guard: Control Flow Isolation
+To prevent unsafe transformations without a CFG:
+*   **Loop Safety**: Loop induction variables are never folded or removed. Loops are effectively "black boxes" to the constant propagator.
+*   **Branch Preservation**: `while(true)` is lowered to `JMP_IF_FALSE 1 ...` but termination relies entirely on explicit `break`. No static termination analysis is performed.
 
 ---
 
@@ -100,24 +92,21 @@ This section explicitly lists what is *not* supported and why, to manage expecta
 *   **Arrays**: 
     *   Must have compile-time fixed size (`int x[10]`).
     *   No dynamic arrays.
-    *   No pointer arithmetic (`*(p+1)` is not supported).
     *   Passed by reference logic in IR (pointer), but syntax is restricted.
 *   **Structs/Classes**: No user-defined types.
-*   **Floating Point**: `float` is a reserved keyword but full backend support is limited to integer arithmetic in this phase.
+*   **Floating Point**: `float` is a keyword but backend support is limited to integer logic currently.
+*   **Numeric Literals**: All integer literals are treated as **base-10**. Leading zeros do not imply octal.
 
 ### B. Safety & Runtime
-*   **No Bounds Checking**: Accessing `arr[100]` for a size-10 array **will compile** and generate an `ASTORE` instruction. At runtime, this leads to undefined behavior (memory corruption). We rely on the programmer to check bounds.
+*   **No Bounds Checking**: Accessing `arr[100]` for a size-10 array **will compile**. At runtime, this leads to undefined behavior.
 *   **No Garbage Collection**: Stack allocation only.
-*   **No Null Safety**: Variables are generally initialized, but uninitialized reads are undefined.
-*   **Error Handling**: The compiler operates in "panic mode" — it halts execution at the **first** syntax or semantic error encountered.
+*   **No Null Safety**: Uninitialized reads are undefined.
+*   **Error Handling**: The compiler operates in "panic mode" — it halts execution at the **first** error.
 
-### C. Backend & Optimization Details
-*   **Instruction Set**: Simplified set (ADD, SUB, JMP, ALOAD, ASTORE, etc.).
-*   **Global DCE**: Not implemented. Unused function definitions are *not* stripped from the output.
-*   **Register Allocation**: Simple strategy (spilling to stack) rather than graph-coloring allocation.
-*   **Built-ins**: 
-    *   `print(expr)`: Output integer to stdout.
-    *   `readInt()`: Input integer from stdin (stubbed in analysis).
+### C. Backend & IR Structural Limits
+*   **Linear IR**: Not SSA-based. Redundant jumps may exist (no jump threading).
+*   **No Function Optimization**: No inlining, no interprocedural analysis. Recursive functions are opaque boundaries.
+*   **Instruction Set**: Simplified set (ADD, SUB, JMP, ALOAD, **LSHIFT**, **RSHIFT**, etc.).
 
 ---
 
@@ -136,7 +125,7 @@ python -m src.main path/to/source.nc
 ```
 
 ### Automated Tests
-Run the `pytest` suite verification.
+Run the `pytest` suite verification (38 Tests covering all phases).
 ```bash
 python -m pytest
 ```

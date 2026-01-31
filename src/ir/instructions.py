@@ -13,6 +13,8 @@ class OpCode(Enum):
 
     DIV = auto()   # DIV dest, src1, src2
     MOD = auto()   # MOD dest, src1, src2
+    LSHIFT = auto() # LSHIFT dest, src, count
+    RSHIFT = auto() # RSHIFT dest, src, count
     
     # Relational
     LT = auto()    # LT dest, src1, src2

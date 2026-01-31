@@ -85,8 +85,34 @@ def test_constant_propagation():
     assert result[1].opcode == OpCode.MOV
     assert result[1].arg1 == 15
     
+    assert result[1].opcode == OpCode.MOV
+    assert result[1].arg1 == 15
+    
     assert result[2].opcode == OpCode.PRINT
     assert result[2].arg1 == 15
+
+from src.optimization.strength_reduction import StrengthReduction
+
+def test_strength_reduction():
+    # Input: MUL x, 8
+    ir = [
+        Instruction(OpCode.MOV, arg1=10, result="x"),
+        Instruction(OpCode.MUL, arg1="x", arg2=8, result="y"),
+        Instruction(OpCode.DIV, arg1="x", arg2=4, result="z")
+    ]
+    
+    optimizer = Optimizer()
+    optimizer.add_pass(StrengthReduction())
+    
+    result = optimizer.optimize(ir)
+    
+    # 2. MUL x 8 -> LSHIFT x 3
+    assert result[1].opcode == OpCode.LSHIFT
+    assert result[1].arg2 == 3
+    
+    # 3. DIV x 4 -> RSHIFT x 2
+    assert result[2].opcode == OpCode.RSHIFT
+    assert result[2].arg2 == 2
 
 from src.optimization.dead_code import DeadCodeElimination
 

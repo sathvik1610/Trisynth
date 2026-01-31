@@ -73,9 +73,11 @@ def process_source(source_code):
     from src.optimization.optimizer import Optimizer
     from src.optimization.constant_fold import ConstantFolding
     from src.optimization.dead_code import DeadCodeElimination
+    from src.optimization.strength_reduction import StrengthReduction
     try:
         optimizer = Optimizer()
         optimizer.add_pass(ConstantFolding())
+        optimizer.add_pass(StrengthReduction())
         optimizer.add_pass(DeadCodeElimination())
         optimized_ir = optimizer.optimize(ir)
         for instr in optimized_ir:
