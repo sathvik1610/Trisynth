@@ -10,6 +10,11 @@ class IRGenerator:
         self.instructions: List[Instruction] = []
         self._temp_counter = 0
         self._label_counter = 0
+        
+        # Scope Management for Unique Renaming
+        # Stack of dicts: {source_name: unique_ir_name}
+        self.scopes = [{}] 
+        self._var_counter = 0
 
     def generate(self, program: ast.Program) -> List[Instruction]:
         self.visit(program)
@@ -24,6 +29,26 @@ class IRGenerator:
         name = f"L{self._label_counter}"
         self._label_counter += 1
         return name
+
+    def _get_unique_name(self, name: str) -> str:
+        """Generates a unique name for a new variable declaration."""
+        unique = f"{name}_{self._var_counter}"
+        self._var_counter += 1
+        return unique
+
+    def _resolve(self, name: str) -> str:
+        """Resolves a source name to its current unique IR name."""
+        # Search from inner-most scope to outer-most
+        for scope in reversed(self.scopes):
+            if name in scope:
+                return scope[name]
+        raise Exception(f"IR Gen Error: Variable '{name}' not found in scope.")
+
+    def _enter_scope(self):
+        self.scopes.append({})
+
+    def _exit_scope(self):
+        self.scopes.pop()
 
     def _emit(self, opcode: OpCode, arg1=None, arg2=None, result=None):
         instr = Instruction(opcode, arg1, arg2, result)
@@ -47,33 +72,57 @@ class IRGenerator:
             self.visit(decl)
 
     def visit_VarDecl(self, node: ast.VarDecl):
-        # int x = 10; -> MOV x, 10
+        # int x = 10; -> MOV x_N, 10
+        
+        # 1. Generate unique name for this declaration
+        unique_name = self._get_unique_name(node.name)
+        
+        # 2. Register in current scope
+        self.scopes[-1][node.name] = unique_name
+        
         if node.initializer:
             value_src = self.visit(node.initializer)
-            self._emit(OpCode.MOV, arg1=value_src, result=node.name)
+            self._emit(OpCode.MOV, arg1=value_src, result=unique_name)
+        else:
+            # Optional: Emit a zero-init or just leave it. 
+            # For safety/debug in IR, maybe good to know it exists? 
+            # But strictly MOV is enough when assigned.
+            pass
 
     def visit_FunctionDecl(self, node: ast.FunctionDecl):
         self._emit(OpCode.FUNC_START, arg1=node.name)
-        self.visit(node.body) # Block
+        
+        self._enter_scope()
+        
+        # Handle parameters (register them in scope)
+        for _, param_name in node.params:
+            unique_name = self._get_unique_name(param_name)
+            self.scopes[-1][param_name] = unique_name
+            # Note: In a real compiler, we'd emit instructions to move args from registers/stack 
+            # to these locals. For this IR, we assume they are set.
+
+        # We visit the body block manually to avoid double scope entry if visit_Block does it
+        # But visit_Block handles scope...
+        # Let's inspect visit_Block node structure. 
+        # AST FunctionDecl has 'body' which is a Block.
+        # If we visit(node.body), visit_Block will enter another scope. 
+        # That's fine (function scope + block scope), or we can just delegate.
+        self.visit(node.body) 
+        
+        self._exit_scope()
+        
         # Implicit return for void functions if missing
         if self.instructions[-1].opcode != OpCode.RETURN:
              self._emit(OpCode.FUNC_END, arg1=node.name)
 
     def visit_Block(self, node: ast.Block):
+        self._enter_scope()
         for stmt in node.statements:
             self.visit(stmt)
+        self._exit_scope()
 
     def visit_IfStmt(self, node: ast.IfStmt):
-        # if (cond) { then } else { else }
-        # Code:
-        #   cond_temp = eval(cond)
-        #   JMP_IF_FALSE cond_temp, L_ELSE (or L_END if no else)
-        #   then_block
-        #   JMP L_END
-        #   LABEL L_ELSE
-        #   else_block
-        #   LABEL L_END
-
+        # ... (same logic, just using visit which uses resolve) ...
         cond_temp = self.visit(node.condition)
         
         label_else = self._new_label() if node.else_branch else None
@@ -92,13 +141,6 @@ class IRGenerator:
         self._emit(OpCode.LABEL, arg1=label_end)
 
     def visit_WhileStmt(self, node: ast.WhileStmt):
-        # LABEL L_START
-        # cond = eval()
-        # JMP_IF_FALSE cond, L_END
-        # body
-        # JMP L_START
-        # LABEL L_END
-
         label_start = self._new_label()
         label_end = self._new_label()
 
@@ -128,17 +170,11 @@ class IRGenerator:
     # --- Expressions ---
 
     def visit_Literal(self, node: ast.Literal) -> str:
-        # Load literal into a temp
-        # Or just return the raw value if the instruction set supports immediates.
-        # Strict TAC usually requires operands to be addresses/regs. 
-        # But for 'ADD t0, t1, 5' implies immediate support.
-        # Let's support immediates in instructions, but for consistency maybe load to temp?
-        # Let's return the immediate value directly, assuming Instruction supports it.
-        # Actually, Python strings/ints mixture.
         return node.value
 
     def visit_Variable(self, node: ast.Variable) -> str:
-        return node.name
+        # Resolve source name to unique IR name
+        return self._resolve(node.name)
 
     def visit_BinaryExpr(self, node: ast.BinaryExpr) -> str:
         left = self.visit(node.left)
@@ -161,5 +197,6 @@ class IRGenerator:
 
     def visit_Assignment(self, node: ast.Assignment) -> str:
         value = self.visit(node.value)
-        self._emit(OpCode.MOV, arg1=value, result=node.name)
-        return node.name
+        target_name = self._resolve(node.name) # Must exist
+        self._emit(OpCode.MOV, arg1=value, result=target_name)
+        return target_name
