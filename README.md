@@ -104,9 +104,20 @@ This section explicitly lists what is *not* supported and why, to manage expecta
 *   **Error Handling**: The compiler operates in "panic mode" — it halts execution at the **first** error.
 
 ### C. Backend & IR Structural Limits
+*   **Dual Architecture Support**: x86-64 (Implemented) and RISC-V (Planned).
+*   **Execution Model**: Stack-Machine. All variables live on the stack. No register allocation.
+    *   **x86-64**: Uses `rbp` frame pointer. Arguments passed on stack (Right-to-Left). System V ABI aligned.
 *   **Linear IR**: Not SSA-based. Redundant jumps may exist (no jump threading).
 *   **No Function Optimization**: No inlining, no interprocedural analysis. Recursive functions are opaque boundaries.
 *   **Instruction Set**: Simplified set (ADD, SUB, JMP, ALOAD, **LSHIFT**, **RSHIFT**, etc.).
+
+> [!WARNING]
+> **ABI & Runtime Limitations**:
+> The x86-64 backend follows a simplified stack-machine model for clarity. It does not fully implement the System V ABI, by design.
+> *   **Stack Alignment**: Alignment before external calls (e.g., `printf`) is not strictly enforced during argument pushing.
+> *   **Registers**: Callee-saved registers (e.g., `rbx`) are utilized as temporaries but not preserved/restored.
+>
+> These trade-offs were chosen to keep the backend readable and focus on IR lowering. The design is correct for the educational scope but should be extended for full ABI compliance in production use.
 
 ---
 

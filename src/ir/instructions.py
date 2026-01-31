@@ -36,6 +36,7 @@ class OpCode(Enum):
     # CALL dest, func_name, NumArgs. Args must be passed via PARAM before.
     CALL = auto()        
     PARAM = auto()       # PARAM val (push argument)
+    LOAD_PARAM = auto()  # LOAD_PARAM index (load argument to local)
     
     # Memory / Arrays
     ALOAD = auto()     # ALOAD dest, array_name, index

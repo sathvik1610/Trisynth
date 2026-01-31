@@ -99,9 +99,11 @@ class IRGenerator:
         self._emit(OpCode.FUNC_START, arg1=node.name)
         self._enter_scope()
         
-        for _, param_name in node.params:
+        for i, (_, param_name) in enumerate(node.params):
             unique_name = self._get_unique_name(param_name)
             self.scopes[-1][param_name] = unique_name
+            # Emit LOAD_PARAM index, result=unique_name
+            self._emit(OpCode.LOAD_PARAM, arg1=i, result=unique_name)
 
         self.visit(node.body) 
         self._exit_scope()
