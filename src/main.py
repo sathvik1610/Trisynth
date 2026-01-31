@@ -56,6 +56,31 @@ def process_source(source_code):
         print("  ✅ Passed (No semantic errors)")
     except Exception as e:
         print(f"  ❌ Failed: {e}")
+        return # Stop if semantic error
+
+    print("\n[4] Intermediate Representation (IR):")
+    from src.ir.ir_gen import IRGenerator
+    try:
+        ir_gen = IRGenerator()
+        ir = ir_gen.generate(ast)
+        for instr in ir:
+            print(f"  {instr}")
+    except Exception as e:
+        print(f"  ❌ Failed: {e}")
+
+    print("\n[5] Optimization (Constant Folding & Dead Code Elimination):")
+    from src.optimization.optimizer import Optimizer
+    from src.optimization.constant_fold import ConstantFolding
+    from src.optimization.dead_code import DeadCodeElimination
+    try:
+        optimizer = Optimizer()
+        optimizer.add_pass(ConstantFolding())
+        optimizer.add_pass(DeadCodeElimination())
+        optimized_ir = optimizer.optimize(ir)
+        for instr in optimized_ir:
+            print(f"  {instr}")
+    except Exception as e:
+        print(f"  ❌ Failed: {e}")
 
 if __name__ == "__main__":
     main()
