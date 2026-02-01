@@ -44,6 +44,18 @@ class Variable(Expr):
     def __repr__(self):
         return f"Var({self.name})"
 
+class ArrayAccess(Expr):
+    """
+    Represents an array element access.
+    Example: x[i]
+    """
+    def __init__(self, name: str, index: Expr):
+        self.name = name
+        self.index = index
+
+    def __repr__(self):
+        return f"ArrayAccess({self.name}[{self.index}])"
+
 class BinaryExpr(Expr):
     """
     Represents a binary operation.
@@ -69,6 +81,19 @@ class UnaryExpr(Expr):
     def __repr__(self):
         return f"Unary({self.operator.name} {self.operand})"
 
+class LogicalExpr(Expr):
+    """
+    Represents a logical operation (&&, ||).
+    Example: a && b
+    """
+    def __init__(self, left: Expr, operator: TokenType, right: Expr):
+        self.left = left
+        self.operator = operator
+        self.right = right
+
+    def __repr__(self):
+        return f"Logic({self.left} {self.operator.name} {self.right})"
+
 class Assignment(Expr):
     """
     Represents a variable assignment. 
@@ -81,6 +106,19 @@ class Assignment(Expr):
 
     def __repr__(self):
         return f"Assign({self.name} = {self.value})"
+
+class ArrayAssignment(Expr):
+    """
+    Represents an array element assignment.
+    Example: x[i] = 10
+    """
+    def __init__(self, name: str, index: Expr, value: Expr):
+        self.name = name
+        self.index = index
+        self.value = value
+
+    def __repr__(self):
+        return f"ArrayAssign({self.name}[{self.index}] = {self.value})"
 
 class CallExpr(Expr):
     """
@@ -125,16 +163,18 @@ class PrintStmt(Stmt):
 class VarDecl(Stmt):
     """
     Represents a variable declaration.
-    Example: int x = 10;
+    Example: int x = 10; or const int x = 10;
     """
-    def __init__(self, type_name: str, name: str, initializer: Optional[Expr]):
+    def __init__(self, type_name: str, name: str, initializer: Optional[Expr], is_const: bool = False):
         self.type_name = type_name
         self.name = name
         self.initializer = initializer
+        self.is_const = is_const
 
     def __repr__(self):
         init_str = f" = {self.initializer}" if self.initializer else ""
-        return f"VarDecl({self.type_name} {self.name}{init_str})"
+        const_str = "const " if self.is_const else ""
+        return f"VarDecl({const_str}{self.type_name} {self.name}{init_str})"
 
 class Block(Stmt):
     """
@@ -173,6 +213,38 @@ class WhileStmt(Stmt):
     def __repr__(self):
         return f"While({self.condition} ...)"
 
+class WhileStmt(Stmt):
+    """
+    Represents a while loop.
+    Example: while (x > 0) { ... }
+    """
+    def __init__(self, condition: Expr, body: Stmt):
+        self.condition = condition
+        self.body = body
+
+    def __repr__(self):
+        return f"While({self.condition} ...)"
+
+class ForStmt(Stmt):
+    """
+    Represents a for loop.
+    Example: for (init; cond; update) { ... }
+    """
+    def __init__(self, init: Optional[Stmt], condition: Optional[Expr], update: Optional[Expr], body: Stmt):
+        self.init = init
+        self.condition = condition
+        self.update = update
+        self.body = body
+
+    def __repr__(self):
+        return f"For(init={self.init}, cond={self.condition}, upd={self.update} ...)"
+
+class BreakStmt(Stmt):
+    def __repr__(self): return "Break"
+
+class ContinueStmt(Stmt):
+    def __repr__(self): return "Continue"
+
 class ReturnStmt(Stmt):
     """
     Represents a return statement.
@@ -183,6 +255,19 @@ class ReturnStmt(Stmt):
 
     def __repr__(self):
         return f"Return({self.value})"
+
+class ArrayDecl(Stmt):
+    """
+    Represents an array declaration.
+    Example: int x[10];
+    """
+    def __init__(self, type_name: str, name: str, size: int):
+        self.type_name = type_name
+        self.name = name
+        self.size = size
+
+    def __repr__(self):
+        return f"ArrayDecl({self.type_name} {self.name}[{self.size}])"
 
 class FunctionDecl(Stmt):
     """

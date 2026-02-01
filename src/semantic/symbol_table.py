@@ -9,6 +9,7 @@ class Symbol:
     name: str
     type_name: str
     category: str # 'variable' or 'function'
+    is_const: bool = False
 
 class SymbolTable:
     """
@@ -32,7 +33,7 @@ class SymbolTable:
         else:
             raise Exception("Compiler Internal Error: Cannot pop global scope.")
 
-    def define(self, name: str, type_name: str, category: str = 'variable'):
+    def define(self, name: str, type_name: str, category: str = 'variable', is_const: bool = False):
         """
         Define a new symbol in the CURRENT scope.
         
@@ -43,7 +44,7 @@ class SymbolTable:
         if name in current_scope:
             raise Exception(f"Semantic Error: Symbol '{name}' already declared in this scope.")
         
-        symbol = Symbol(name, type_name, category)
+        symbol = Symbol(name, type_name, category, is_const)
         current_scope[name] = symbol
 
     def resolve(self, name: str) -> Optional[Symbol]:

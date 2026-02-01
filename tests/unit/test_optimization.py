@@ -54,9 +54,65 @@ def test_mixed_optimization():
     assert result[0].opcode == OpCode.MOV
     assert result[0].arg1 == 3
     
-    assert result[1].opcode == OpCode.SUB
-    # Notes: We don't propagate constants yet (Constant Propagation is separate).
-    # So t0 remains t0 in the next instruction.
+    # constant propagation enabled!
+    # SUB t1 3 5 -> MOV t1 -2
+    assert result[1].opcode == OpCode.MOV
+    assert result[1].arg1 == -2
+
+def test_constant_propagation():
+    # Input:
+    # 1. MOV x 10
+    # 2. ADD y x 5  -> Should become ADD y 10 5 -> MOV y 15
+    # 3. PRINT y    -> Should become PRINT 15
+    
+    ir = [
+        Instruction(OpCode.MOV, arg1=10, result="x"),
+        Instruction(OpCode.ADD, arg1="x", arg2=5, result="y"),
+        Instruction(OpCode.PRINT, arg1="y")
+    ]
+    
+    optimizer = Optimizer()
+    optimizer.add_pass(ConstantFolding())
+    # Note: We need DCE to see the full effect of removal, 
+    # but strictly checking ConstantFolding phase:
+    
+    result = optimizer.optimize(ir)
+    
+    # 1. MOV x 10 (remains, strictly speaking, unless DCE removes it)
+    # 2. MOV y 15 (folded)
+    # 3. PRINT 15 (propagated)
+    
+    assert result[1].opcode == OpCode.MOV
+    assert result[1].arg1 == 15
+    
+    assert result[1].opcode == OpCode.MOV
+    assert result[1].arg1 == 15
+    
+    assert result[2].opcode == OpCode.PRINT
+    assert result[2].arg1 == 15
+
+from src.optimization.strength_reduction import StrengthReduction
+
+def test_strength_reduction():
+    # Input: MUL x, 8
+    ir = [
+        Instruction(OpCode.MOV, arg1=10, result="x"),
+        Instruction(OpCode.MUL, arg1="x", arg2=8, result="y"),
+        Instruction(OpCode.DIV, arg1="x", arg2=4, result="z")
+    ]
+    
+    optimizer = Optimizer()
+    optimizer.add_pass(StrengthReduction())
+    
+    result = optimizer.optimize(ir)
+    
+    # 2. MUL x 8 -> LSHIFT x 3
+    assert result[1].opcode == OpCode.LSHIFT
+    assert result[1].arg2 == 3
+    
+    # 3. DIV x 4 -> RSHIFT x 2
+    assert result[2].opcode == OpCode.RSHIFT
+    assert result[2].arg2 == 2
 
 from src.optimization.dead_code import DeadCodeElimination
 
@@ -105,3 +161,31 @@ def test_dead_code_chain():
     # Expected: Only PRINT c remains.
     assert len(result) == 1
     assert result[0].opcode == OpCode.PRINT
+
+from src.optimization.dead_code import DeadCodeElimination
+
+def test_dce_preserves_astore_input():
+    # Regression test for ASTORE using 'result' field as input
+    # t1 = 10 * 20
+    # ASTORE arr 0 t1
+    # t1 should NOT be removed.
+    
+    t1 = "t1"
+    arr = "arr"
+    idx = "0"
+    
+    instrs = [
+        # Definition of t1
+        Instruction(OpCode.MUL, arg1=10, arg2=20, result=t1),
+        # Use of t1 in ASTORE (stored in result field)
+        Instruction(OpCode.ASTORE, arg1=arr, arg2=idx, result=t1)
+    ]
+    
+    optimizer = Optimizer()
+    optimizer.add_pass(DeadCodeElimination())
+    opt_instrs = optimizer.optimize(instrs)
+    
+    # Both instructions must remain
+    assert len(opt_instrs) == 2
+    assert opt_instrs[0].opcode == OpCode.MUL
+    assert opt_instrs[1].opcode == OpCode.ASTORE

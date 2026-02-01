@@ -40,6 +40,12 @@ class DeadCodeElimination:
             # assuming args passed via param registers or stack prior to call, or implementation details).
             # For our logic: arg1 and arg2 cover most usages.
             
+            # CRITICAL FIX: ASTORE uses 'result' field as the Value to store.
+            # Instruction(ASTORE, arr, index, value)
+            if instr.opcode == OpCode.ASTORE:
+                if isinstance(instr.result, str):
+                    used_vars.add(instr.result)
+            
         # 2. Filter instructions
         new_instructions = []
         changed = False
@@ -71,7 +77,11 @@ class DeadCodeElimination:
             return True
             
         # I/O and Function Calls
-        if instr.opcode in (OpCode.PRINT, OpCode.CALL):
+        if instr.opcode in (OpCode.PRINT, OpCode.CALL, OpCode.PARAM):
+            return True
+            
+        # Memory writes (Side effects)
+        if instr.opcode == OpCode.ASTORE:
             return True
             
         return False
