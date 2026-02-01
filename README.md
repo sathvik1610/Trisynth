@@ -40,46 +40,84 @@ Source Code (NanoC) -> Lexer -> Parser -> AST -> Semantic Analyzer -> IR Gen -> 
 
 #### Language Design (NanoC)
 *   **Type System**: Statically typed (`int`, `bool`, `void`) with no implicit conversions.
-*   **Control Flow**: `if/else`, `while`, but no `switch` or `goto` to simplify CFG construction.
-*   **Functions**: Recursive, pass-by-value, no overloading.
+*   **Control Flow**: `if/else`, `while`, `for`, `break`, `continue`. (Note: No `switch` or `goto`).
+*   **Functions**: Recursive, pass-by-value, no overloading. Supports **Hoisting** (Forward Declarations).
+*   **Data Structures**: 
+    *   **Arrays**: Fixed-size homogeneous arrays (e.g., `int arr[10]`). 
+    *   *Constraint*: No pointers, no dynamic allocation (`malloc`).
+*   **Safety**:
+    *   **Immutable Constants**: `const` keyword strictly enforced.
+    *   **Operators**: `++`, `--` provided as valid syntax sugar.
 
 #### Intermediate Representation (IR)
 *   **Design**: Linear Three-Address Code (TAC).
 *   **Trade-off**: We chose linear IR over SSA (Static Single Assignment) to reduce implementation complexity while still allowing for fundamental optimizations.
 
-#### Optimization Strategy
-We implement conservative, local optimizations to ensure semantic safety:
-*   **Constant Folding**: Folds literal expressions (e.g., `1 + 2` -> `3`). Does *not* fold variables to avoid complexity.
-*   **Dead Code Elimination**: Iteratively removes instructions defining unused temporary variables. User variables are generally preserved to maintain observability unless strict local conditions are met.
+---
+
+## 4. Optimization Strategy & Design Philosophy
+
+Trisynth prioritizes **semantic correctness** and **conservative optimization** over aggressive performance tuning. The compiler avoids transformations needing data-flow analysis, CFG construction, or SSA form.
+
+### Implemented Optimizations
+
+**1. Scope-Aware Constant Folding & Propagation**
+*   Evaluates arithmetic expressions with **compile-time constant operands**.
+*   **Scope Sensitivity**: Inner-scope variables may be folded independently of outer shadowed variables. (No global propagation).
+*   **Constraints**: Works only when all operands are literals within the basic block. No algebraic simplification (e.g. `x+y-y` is not simplified).
+
+**2. Dead Code Elimination (DCE)**
+*   Removes computations whose results are never used.
+*   **Conservative**: Only unused compiler-generated temporaries (`tX`) are guaranteed removed. Instructions with side effects (`PRINT`, `CALL`, `ASTORE`, `RETURN`) are strictly preserved.
+
+**3. Strength Reduction**
+*   Replaces expensive arithmetic with cheaper operations:
+    *   Multiplication by powers of two (`i * 4` → `i << 2`)
+    *   Division by powers of two (`k / 2` → `k >> 1`)
+    *   Zero Multiplication (`x * 0` → `0`)
+*   **Assumptions**: Integer arithmetic, non-negative operands (logical shift behavior for unsigned).
+
+### Safety Guard: Control Flow Isolation
+To prevent unsafe transformations without a CFG:
+*   **Loop Safety**: Loop induction variables are never folded or removed. Loops are effectively "black boxes" to the constant propagator.
+*   **Branch Preservation**: `while(true)` is lowered to `JMP_IF_FALSE 1 ...` but termination relies entirely on explicit `break`. No static termination analysis is performed.
 
 ---
 
-## 4. Limitations & Trade-offs
+## 5. Limitations & Trade-offs (Detailed)
 
-### Memory & Runtime
-*   **No Heap**: No `malloc`/`free`. Stack allocation only.
-*   **No Garbage Collection**: Not needed for the current scope.
-*   **Safety**: No runtime bounds checking or overflow protection.
+This section explicitly lists what is *not* supported and why, to manage expectations.
 
-### IR & Backend
-*   **Instruction Set**: Simplified set (ADD, SUB, JMP, etc.) sufficient for NanoC but not exhaustive.
-*   **Register Allocation**: Simple strategy (spilling to stack) rather than graph-coloring allocation.
+### A. Language Features
+*   **Arrays**: 
+    *   Must have compile-time fixed size (`int x[10]`).
+    *   No dynamic arrays.
+    *   Passed by reference logic in IR (pointer), but syntax is restricted.
+*   **Structs/Classes**: No user-defined types.
+*   **Floating Point**: `float` is a keyword but backend support is limited to integer logic currently.
+*   **Numeric Literals**: All integer literals are treated as **base-10**. Leading zeros do not imply octal.
 
-### Error Handling
-*   **Panic Mode**: Compilation stops at the first critical error.
-*   **Diagnostics**: Focus on location (line/col) rather than recovery suggestions.
+### B. Safety & Runtime
+*   **No Bounds Checking**: Accessing `arr[100]` for a size-10 array **will compile**. At runtime, this leads to undefined behavior.
+*   **No Garbage Collection**: Stack allocation only.
+*   **No Null Safety**: Uninitialized reads are undefined.
+*   **Error Handling**: The compiler operates in "panic mode" — it halts execution at the **first** error.
 
-### Security
-*   **Constraint**: The compiler is not hardened against malformed inputs and provides no sandboxing for generated code.
+### C. Backend & IR Structural Limits
+*   **Dual Architecture Support**: x86-64 (Implemented) and RISC-V (Planned).
+*   **Execution Model**: Stack-Machine. All variables live on the stack. No register allocation.
+    *   **x86-64**: Uses `rbp` frame pointer. Arguments passed on stack (Right-to-Left). System V ABI aligned.
+*   **Linear IR**: Not SSA-based. Redundant jumps may exist (no jump threading).
+*   **No Function Optimization**: No inlining, no interprocedural analysis. Recursive functions are opaque boundaries.
+*   **Instruction Set**: Simplified set (ADD, SUB, JMP, ALOAD, **LSHIFT**, **RSHIFT**, etc.).
 
----
-
-## 5. Technology Stack
-
-- **Implementation Language:** Python 3 (Chosen for readability and rapid prototyping).
-- **Target Architectures:** x86-64 / RISC-V.
-- **Assembler:** NASM or GNU Assembler (GAS).
-- **Operating System:** Linux / Windows (Cross-platform python logic).
+> [!WARNING]
+> **ABI & Runtime Limitations**:
+> The x86-64 backend follows a simplified stack-machine model for clarity. It does not fully implement the System V ABI, by design.
+> *   **Stack Alignment**: Alignment before external calls (e.g., `printf`) is not strictly enforced during argument pushing.
+> *   **Registers**: Callee-saved registers (e.g., `rbx`) are utilized as temporaries but not preserved/restored.
+>
+> These trade-offs were chosen to keep the backend readable and focus on IR lowering. The design is correct for the educational scope but should be extended for full ABI compliance in production use.
 
 ---
 
@@ -98,7 +136,7 @@ python -m src.main path/to/source.nc
 ```
 
 ### Automated Tests
-Run the `pytest` suite verification.
+Run the `pytest` suite verification (38 Tests covering all phases).
 ```bash
 python -m pytest
 ```
@@ -108,10 +146,10 @@ python -m pytest
 ## 7. Future Work
 
 While not in the current scope, future extensions could include:
+*   **Runtime Bounds Checks**: Injecting `check_bounds` instructions before `ALOAD`/`ASTORE`.
 *   **SSA Conversion**: For more aggressive optimizations.
 *   **Control Flow Graph (CFG)**: To enable global data-flow analysis.
 *   **Register Allocation**: Implementing Linear Scan or Graph Coloring.
-*   **New Backends**: Support for LLVM IR output.
 
 ---
 

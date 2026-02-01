@@ -61,3 +61,23 @@ def test_while_loop():
     assert len(labels) == 2 # Start and End
     assert len(jumps) == 1  # Loop back
     assert OpCode.JMP_IF_FALSE in opcodes
+
+def test_shadowing():
+    source = """
+    int x = 10;
+    void main() {
+        int x = 20;
+    }
+    """
+    ir = generate_ir(source)
+    # Check that we have two MOVs to different variables
+    # e.g. MOV x_0 10, MOV x_1 20
+    movs = [instr for instr in ir if instr.opcode == OpCode.MOV]
+    assert len(movs) == 2
+    
+    dest0 = movs[0].result
+    dest1 = movs[1].result
+    
+    assert dest0 != dest1
+    assert "x_" in dest0
+    assert "x_" in dest1

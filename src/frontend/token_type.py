@@ -18,6 +18,7 @@ class TokenType(Enum):
     KW_BOOL = auto()        # bool
     KW_CHAR = auto()        # char
     KW_VOID = auto()        # void
+    KW_CONST = auto()       # const
 
     # --- Keywords (Control Flow) ---
     KW_IF = auto()          # if
