@@ -1,0 +1,8 @@
+int main() {
+    // Show the unoptimized IR first (which will have ADD and MUL instructions).
+    // Then show the optimized IR, which should just load the constant '20' into 'x'.
+    int x = 10 + (5 * 2); 
+    
+    print(x);
+    return 0;
+}

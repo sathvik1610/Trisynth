@@ -3,11 +3,13 @@ import argparse
 from src.frontend.lexer import Lexer
 from src.frontend.parser import Parser
 
+
 def main():
     parser = argparse.ArgumentParser(description="Trisynth Compiler")
     parser.add_argument('file', nargs='?', help="Source file to compile")
-    parser.add_argument('--demo', action='store_true', help="Run in interactive demo mode")
-    
+    parser.add_argument('--demo', action='store_true',
+                        help="Run in interactive demo mode")
+
     args = parser.parse_args()
 
     if args.demo or not args.file:
@@ -15,15 +17,31 @@ def main():
     else:
         compile_file(args.file)
 
+
 def run_demo():
-    print("Trisynth Compiler Interactive Mode")
+    print("Trisynth Compiler Demo Mode")
     print("----------------------------------")
-    print("Type your code below (press Ctrl+Z then Enter to finish):")
+    print("Reading code from 'temp.txt'...")
+
+    # Path to your local temporary text file
+    temp_file_path = "src/temp.txt"
+
     try:
-        source_code = sys.stdin.read()
+        with open(temp_file_path, 'r') as f:
+            source_code = f.read()
+
+        if not source_code.strip():
+            print(f"'{temp_file_path}' is empty. Put some code in it first!")
+            return
+
         process_source(source_code)
-    except KeyboardInterrupt:
-        return
+
+    except FileNotFoundError:
+        print(f"❌ Error: '{temp_file_path}' not found.")
+        print("Please create a 'temp.txt' file in this folder and add your Trisynth code to it.")
+    except Exception as e:
+        print(f"Error reading file: {e}")
+
 
 def compile_file(filepath):
     try:
@@ -34,6 +52,7 @@ def compile_file(filepath):
         print(f"Error: File '{filepath}' not found.")
     except Exception as e:
         print(f"Error: {e}")
+
 
 def process_source(source_code):
     print("\n[1] Tokens:")
@@ -56,7 +75,7 @@ def process_source(source_code):
         print("  ✅ Passed (No semantic errors)")
     except Exception as e:
         print(f"  ❌ Failed: {e}")
-        return # Stop if semantic error
+        return  # Stop if semantic error
 
     print("\n[4] Intermediate Representation (IR):")
     from src.ir.ir_gen import IRGenerator
@@ -79,6 +98,7 @@ def process_source(source_code):
             print(f"  {instr}")
     except Exception as e:
         print(f"  ❌ Failed: {e}")
+
 
 if __name__ == "__main__":
     main()
