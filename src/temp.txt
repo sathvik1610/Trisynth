@@ -1,8 +1,24 @@
 int main() {
-    // Show the unoptimized IR first (which will have ADD and MUL instructions).
-    // Then show the optimized IR, which should just load the constant '20' into 'x'.
-    int x = 10 + (5 * 2); 
+    // 1. Constant Folding Candidate
+    // The compiler should pre-calculate this entirely.
+    // IR should just show something like: STORE 92 -> x
+    int x = (10 * 5) + (100 / 2) - 8; 
     
-    print(x);
-    return 0;
+    bool is_debug = false;
+
+    // 2. Dead Code Elimination Candidate (Unreachable Branch)
+    // Because is_debug is false, this entire block should vanish from the IR.
+    if (is_debug) {
+        int unused_var = 999;
+        print(unused_var);
+    } else {
+        x = x + 1;
+    }
+
+    // 3. Dead Code Elimination Candidate (Post-Return)
+    return x;
+
+    // This should be flagged as unreachable and removed from the IR.
+    int ghost_var = 404;
+    print(ghost_var);
 }
