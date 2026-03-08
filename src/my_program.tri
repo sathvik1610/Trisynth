@@ -1,0 +1,8 @@
+// my_program.tri
+void main() {
+    int arr[5];
+    arr[0] = 42;
+    arr[1] = 10;
+    int sum = arr[0] + arr[1];
+    print(sum);
+}

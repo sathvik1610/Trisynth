@@ -1,0 +1,16 @@
+// TEST 10 — Power function (recursive: base^exp)
+// Expected output:
+//   2^0 = 1
+//   2^5 = 32
+//   3^4 = 81
+
+int power(int base, int exp) {
+    if (exp <= 0) { return 1; }
+    return base * power(base, exp - 1);
+}
+
+void main() {
+    print(power(2, 0));
+    print(power(2, 5));
+    print(power(3, 4));
+}

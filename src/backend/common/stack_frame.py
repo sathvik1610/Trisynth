@@ -15,10 +15,11 @@ class StackFrame:
     """
     def __init__(self):
         self.offsets: Dict[str, int] = {}
+        self.is_ref: Dict[str, bool] = {} # True if the variable is a pointer/reference to an array
         self.current_offset = 0 # Grows downwards
         self.total_size = 0
 
-    def allocate(self, var_name: str, size: int = 8):
+    def allocate(self, var_name: str, size: int = 8, is_ref: bool = False):
         """
         Allocate a slot for a variable.
         Size is in bytes (default 8 bytes).
@@ -28,6 +29,7 @@ class StackFrame:
             
         self.current_offset += size
         self.offsets[var_name] = self.current_offset
+        self.is_ref[var_name] = is_ref
 
     def get_offset(self, var_name: str) -> int:
         """Returns the offset from any Base Pointer (e.g. 8 means [FP - 8])."""
@@ -35,6 +37,10 @@ class StackFrame:
             # Auto-allocate if not found (Lazy allocation for temp vars)
             self.allocate(var_name)
         return self.offsets[var_name]
+
+    def is_reference(self, var_name: str) -> bool:
+        """Returns True if the variable is a reference/pointer."""
+        return self.is_ref.get(var_name, False)
 
     def finalize(self):
         """Align frame size to 16 bytes."""

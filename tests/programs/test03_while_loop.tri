@@ -1,0 +1,10 @@
+// TEST 03 — While Loop (Countdown)
+// Expected output: 5 4 3 2 1 0  (one per line)
+
+void main() {
+    int n = 5;
+    while (n >= 0) {
+        print(n);
+        n = n - 1;
+    }
+}

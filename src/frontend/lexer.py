@@ -118,18 +118,21 @@ class Lexer:
         token_specs = [
             # Skip whitespace
             (r'[ \t\r\n]+', None),
-            
-            # Skip comments (Single line // ...)
+
+            # Skip single-line comments
             (r'//[^\n]*', None),
 
+            # Block comments /* ... */ — must be closed
+            (r'/\*.*?\*/', None),  # closed block comment (skip), re.DOTALL matched below
+
             # Numeric Literals
-            (r'\d+\.\d+', TokenType.FLOAT), # Float before Int
+            (r'\d+\.\d+', TokenType.FLOAT),
             (r'\d+', TokenType.INTEGER),
 
             # Identifier (or Keyword)
             (r'[a-zA-Z_][a-zA-Z0-9_]*', TokenType.IDENTIFIER),
 
-            # Operators (Multi-char)
+            # Multi-char Operators (order matters — longer first)
             (r'\+\+', TokenType.INCREMENT),
             (r'--', TokenType.DECREMENT),
             (r'==', TokenType.EQ),
@@ -139,7 +142,7 @@ class Lexer:
             (r'&&', TokenType.AND),
             (r'\|\|', TokenType.OR),
 
-            # Operators (Single-char)
+            # Single-char Operators
             (r'\+', TokenType.PLUS),
             (r'-', TokenType.MINUS),
             (r'\*', TokenType.STAR),
@@ -159,15 +162,23 @@ class Lexer:
             (r'\]', TokenType.RBRACKET),
             (r';', TokenType.SEMICOLON),
             (r',', TokenType.COMMA),
-            
-            # Character Literal (basic support)
-            (r"'[^']'", TokenType.CHAR), 
+
+            # Character Literal
+            (r"'[^']'", TokenType.CHAR),
         ]
 
         while self.pos < self.length:
             matched = False
-            
-            # Capture start position of the potential token
+
+            # Detect an unclosed block comment before running token_specs
+            if self.source_code[self.pos:self.pos+2] == '/*':
+                end = self.source_code.find('*/', self.pos + 2)
+                if end == -1:
+                    raise Exception(f"Lexical Error: Unclosed block comment starting at {self.line}:{self.column}")
+                text = self.source_code[self.pos:end+2]
+                self._advance(len(text))
+                continue
+
             start_line = self.line
             start_col = self.column
 

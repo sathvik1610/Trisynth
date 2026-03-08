@@ -1,0 +1,25 @@
+// TEST 05 — Arrays (Manual fill + sum)
+// Expected output:
+//   sum = 150
+//   max = 50
+
+void main() {
+    int arr[5];
+    arr[0] = 10;
+    arr[1] = 20;
+    arr[2] = 30;
+    arr[3] = 40;
+    arr[4] = 50;
+
+    /* Compute sum */
+    int sum = arr[0] + arr[1] + arr[2] + arr[3] + arr[4];
+    print(sum);
+
+    /* Find max */
+    int max = arr[0];
+    if (arr[1] > max) { max = arr[1]; }
+    if (arr[2] > max) { max = arr[2]; }
+    if (arr[3] > max) { max = arr[3]; }
+    if (arr[4] > max) { max = arr[4]; }
+    print(max);
+}

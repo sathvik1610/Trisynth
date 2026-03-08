@@ -130,11 +130,10 @@ class Parser:
                 pass
             size_token = self._consume(TokenType.INTEGER, "Expected array size.")
             size = int(size_token.value)
+            if size <= 0:
+                raise Exception(f"Array size must be a positive integer at {size_token.line}:{size_token.column}")
             self._consume(TokenType.RBRACKET, "Expected ']' after array size.")
             self._consume(TokenType.SEMICOLON, "Expected ';' after array declaration.")
-            # We need to pass is_const to ArrayDecl too?
-            # AST ArrayDecl doesn't have is_const. Let's fix AST or assume const arrays are blocked.
-            # Let's assume for now valid const is mainly for variables (int x = 5).
             return ast.ArrayDecl(type_str, name_str, size)
 
         initializer = None
@@ -165,6 +164,12 @@ class Parser:
 
                 # Param name
                 pn_token = self._consume(TokenType.IDENTIFIER, "Expected parameter name.")
+                
+                # Check for array parameter: int arr[]
+                if self._match(TokenType.LBRACKET):
+                    self._consume(TokenType.RBRACKET, "Expected ']' after array parameter name.")
+                    pt_str += "[]"
+
                 params.append((pt_str, pn_token.value))
 
                 if not self._match(TokenType.COMMA):
