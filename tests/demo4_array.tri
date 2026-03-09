@@ -1,0 +1,27 @@
+// ============================================================
+//  DEMO 4 — Arrays
+//
+//  Demonstrates:
+//    • Declaring a fixed-size array
+//    • Storing values into elements
+//    • Reading elements back
+//    • Using an array element in an expression
+// ============================================================
+
+void main() {
+    int scores[4];
+
+    scores[0] = 10;
+    scores[1] = 20;
+    scores[2] = 30;
+    scores[3] = 40;
+
+    print(scores[0]);   // 10
+    print(scores[1]);   // 20
+    print(scores[2]);   // 30
+    print(scores[3]);   // 40
+
+    // Use array elements in an expression
+    int total = scores[0] + scores[1] + scores[2] + scores[3];
+    print(total);       // 100
+}
