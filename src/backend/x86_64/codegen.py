@@ -2,6 +2,7 @@ from typing import List
 from src.ir.instructions import Instruction, OpCode
 from src.backend.common.stack_frame import StackFrame
 
+
 class X86Generator:
     """
     Generates x86-64 Assembly (NASM) from IR.
@@ -12,28 +13,14 @@ class X86Generator:
         self.output: List[str] = []
         self.current_frame = None
         self._pending_params = []  # Buffer for PARAM instructions
-        
+
         # Strings data section
         self.strings = []
 
     def generate(self, instructions: List[Instruction]) -> str:
         self._emit_header()
-        # ... (rest same)
-
-    # ...
-
-    def _store_rax(self, dest_var, src_reg="rax"):
-        """Stores Register (default RAX) into stack slot of dest_var."""
-        if dest_var is None: return 
-        offset = self.current_frame.get_offset(dest_var)
-        self._emit(f"    mov [rbp - {offset}], {src_reg}")
-
-    def generate(self, instructions: List[Instruction]) -> str:
-        self._emit_header()
-        
         current_func_instrs = []
         in_function = False
-        
         for instr in instructions:
             if instr.opcode == OpCode.FUNC_START:
                 in_function = True
@@ -47,26 +34,55 @@ class X86Generator:
                 current_func_instrs.append(instr)
             else:
                 pass
-                
+        self._emit_footer()
+        return "\n".join(self.output)
+
+    def _store_rax(self, dest_var, src_reg="rax"):
+        """Stores Register (default RAX) into stack slot of dest_var."""
+        if dest_var is None:
+            return
+        offset = self.current_frame.get_offset(dest_var)
+        self._emit(f"    mov [rbp - {offset}], {src_reg}")
+
+    def generate(self, instructions: List[Instruction]) -> str:
+        self._emit_header()
+
+        current_func_instrs = []
+        in_function = False
+
+        for instr in instructions:
+            if instr.opcode == OpCode.FUNC_START:
+                in_function = True
+                current_func_instrs = [instr]
+            elif instr.opcode == OpCode.FUNC_END:
+                current_func_instrs.append(instr)
+                self._compile_function(current_func_instrs)
+                in_function = False
+                current_func_instrs = []
+            elif in_function:
+                current_func_instrs.append(instr)
+            else:
+                pass
+
         self._emit_footer()
         return "\n".join(self.output)
 
     def _compile_function(self, instrs: List[Instruction]):
         func_name = instrs[0].arg1
-        
+
         # 1. Analyze Frame
         frame = StackFrame()
         for instr in instrs:
             if instr.opcode == OpCode.ARR_DECL:
-               frame.allocate(instr.result, size=instr.arg1 * 8)
+                frame.allocate(instr.result, size=instr.arg1 * 8)
             elif instr.opcode == OpCode.LOAD_PARAM_REF:
-               frame.allocate(instr.result, is_ref=True)
+                frame.allocate(instr.result, is_ref=True)
             elif instr.result and instr.opcode != OpCode.ARR_DECL:
-               frame.allocate(instr.result)
-        
+                frame.allocate(instr.result)
+
         frame.finalize()
         self.current_frame = frame
-        
+
         # 2. Emit Prologue
         self._emit(f"; --- Function {func_name} ---")
         self._emit(f"global {func_name}")
@@ -75,11 +91,11 @@ class X86Generator:
         self._emit("    mov rbp, rsp")
         if frame.total_size > 0:
             self._emit(f"    sub rsp, {frame.total_size}")
-            
+
         # 3. Emit Body
-        for instr in instrs[1:-1]: # Skip FUNC_START/END
+        for instr in instrs[1:-1]:  # Skip FUNC_START/END
             self._emit_instruction(instr)
-            
+
         # 4. Emit Epilogue
         self._emit(f".exit_{func_name}:")
         self._emit("    mov rsp, rbp")
@@ -88,11 +104,11 @@ class X86Generator:
 
     def _emit_instruction(self, instr: Instruction):
         self._emit(f"    ; {instr}")
-        
+
         if instr.opcode == OpCode.MOV:
             val = self._load_to_rax(instr.arg1)
             self._store_rax(instr.result)
-            
+
         elif instr.opcode == OpCode.ADD:
             self._load_to_rax(instr.arg1)
             self._emit(f"    mov rbx, rax")
@@ -108,58 +124,58 @@ class X86Generator:
             self._store_rax(instr.result)
 
         elif instr.opcode == OpCode.MUL:
-             self._load_to_rax(instr.arg1)
-             op2 = self._resolve_operand(instr.arg2)
-             self._emit(f"    imul rax, {op2}")
-             self._store_rax(instr.result)
+            self._load_to_rax(instr.arg1)
+            op2 = self._resolve_operand(instr.arg2)
+            self._emit(f"    imul rax, {op2}")
+            self._store_rax(instr.result)
 
         elif instr.opcode == OpCode.DIV:
-             self._load_to_rax(instr.arg1)
-             self._emit("    cqo")
-             op2 = instr.arg2
-             if isinstance(op2, int):
-                 self._emit(f"    mov rcx, {op2}")
-                 self._emit("    idiv rcx")
-             else:
-                 src = self._resolve_operand(op2)
-                 self._emit(f"    idiv qword {src}")
-             self._store_rax(instr.result)
+            self._load_to_rax(instr.arg1)
+            self._emit("    cqo")
+            op2 = instr.arg2
+            if isinstance(op2, int):
+                self._emit(f"    mov rcx, {op2}")
+                self._emit("    idiv rcx")
+            else:
+                src = self._resolve_operand(op2)
+                self._emit(f"    idiv qword {src}")
+            self._store_rax(instr.result)
 
         elif instr.opcode == OpCode.MOD:
-             self._load_to_rax(instr.arg1)
-             self._emit("    cqo")
-             op2 = instr.arg2
-             if isinstance(op2, int):
-                 self._emit(f"    mov rcx, {op2}")
-                 self._emit("    idiv rcx")
-             else:
-                 src = self._resolve_operand(op2)
-                 self._emit(f"    idiv qword {src}")
-             self._emit(f"    mov rax, rdx")
-             self._store_rax(instr.result)
+            self._load_to_rax(instr.arg1)
+            self._emit("    cqo")
+            op2 = instr.arg2
+            if isinstance(op2, int):
+                self._emit(f"    mov rcx, {op2}")
+                self._emit("    idiv rcx")
+            else:
+                src = self._resolve_operand(op2)
+                self._emit(f"    idiv qword {src}")
+            self._emit(f"    mov rax, rdx")
+            self._store_rax(instr.result)
 
         elif instr.opcode == OpCode.LSHIFT:
-             count = instr.arg2
-             self._load_to_rax(instr.arg1)
-             if isinstance(count, int):
-                 self._emit(f"    shl rax, {count}")
-             else:
-                 src_count = self._resolve_operand(count)
-                 self._emit(f"    mov rcx, {src_count}")
-                 self._emit("    shl rax, cls") # typo fix?
-                 self._emit("    shl rax, cl") 
-             self._store_rax(instr.result)
+            count = instr.arg2
+            self._load_to_rax(instr.arg1)
+            if isinstance(count, int):
+                self._emit(f"    shl rax, {count}")
+            else:
+                src_count = self._resolve_operand(count)
+                self._emit(f"    mov rcx, {src_count}")
+                self._emit("    shl rax, cls")  # typo fix?
+                self._emit("    shl rax, cl")
+            self._store_rax(instr.result)
 
         elif instr.opcode == OpCode.RSHIFT:
-             count = instr.arg2
-             self._load_to_rax(instr.arg1)
-             if isinstance(count, int):
-                 self._emit(f"    sar rax, {count}")
-             else:
-                 src_count = self._resolve_operand(count)
-                 self._emit(f"    mov rcx, {src_count}")
-                 self._emit("    sar rax, cl")
-             self._store_rax(instr.result)
+            count = instr.arg2
+            self._load_to_rax(instr.arg1)
+            if isinstance(count, int):
+                self._emit(f"    sar rax, {count}")
+            else:
+                src_count = self._resolve_operand(count)
+                self._emit(f"    mov rcx, {src_count}")
+                self._emit("    sar rax, cl")
+            self._store_rax(instr.result)
 
         elif instr.opcode in (OpCode.LT, OpCode.GT, OpCode.EQ, OpCode.NEQ, OpCode.LTE, OpCode.GTE):
             self._load_to_rax(instr.arg1)
@@ -180,45 +196,45 @@ class X86Generator:
             self._emit("    lea rdi, [fmt_int]")
             self._emit("    xor rax, rax")
             self._emit("    call printf")
-            
+
         elif instr.opcode == OpCode.RETURN:
-             if instr.arg1 is not None:
-                 self._load_to_rax(instr.arg1)
-             self._emit("    mov rsp, rbp")
-             self._emit("    pop rbp")
-             self._emit("    ret")
+            if instr.arg1 is not None:
+                self._load_to_rax(instr.arg1)
+            self._emit("    mov rsp, rbp")
+            self._emit("    pop rbp")
+            self._emit("    ret")
 
         elif instr.opcode == OpCode.LABEL:
-             self._emit(f"{instr.arg1}:")
+            self._emit(f"{instr.arg1}:")
 
         elif instr.opcode == OpCode.JMP:
-             self._emit(f"    jmp {instr.arg1}")
+            self._emit(f"    jmp {instr.arg1}")
 
         elif instr.opcode == OpCode.JMP_IF_FALSE:
-             self._load_to_rax(instr.arg1)
-             self._emit("    cmp rax, 0")
-             self._emit(f"    je {instr.arg2}")
+            self._load_to_rax(instr.arg1)
+            self._emit("    cmp rax, 0")
+            self._emit(f"    je {instr.arg2}")
 
         # --- Memory / Arrays ---
         elif instr.opcode == OpCode.ARR_DECL:
-            pass # Already handled in frame analysis
-            
+            pass  # Already handled in frame analysis
+
         elif instr.opcode == OpCode.ALOAD:
-            idx_val = instr.arg2 # Register/Imm/Var
-            
+            idx_val = instr.arg2  # Register/Imm/Var
+
             # Load index to RAX
-            self._load_to_rax(idx_val) # RAX = index
-            self._emit("    imul rax, 8") # Scale
-            
+            self._load_to_rax(idx_val)  # RAX = index
+            self._emit("    imul rax, 8")  # Scale
+
             arr_base = self.current_frame.get_offset(instr.arg1)
-            
+
             if self.current_frame.is_reference(instr.arg1):
                 # Array was passed as a parameter (reference)
                 self._emit(f"    mov rcx, [rbp - {arr_base}]")
             else:
                 # Array is currently on the local stack
                 self._emit(f"    lea rcx, [rbp - {arr_base}]")
-                
+
             self._emit("    add rcx, rax")
             self._emit("    mov rdx, [rcx]")
             self._store_rax(instr.result, src_reg="rdx")
@@ -227,21 +243,22 @@ class X86Generator:
             idx_val = instr.arg2
             self._load_to_rax(idx_val)
             self._emit("    imul rax, 8")
-            
+
             arr_base = self.current_frame.get_offset(instr.arg1)
             if self.current_frame.is_reference(instr.arg1):
-                 self._emit(f"    mov rcx, [rbp - {arr_base}]")
+                self._emit(f"    mov rcx, [rbp - {arr_base}]")
             else:
-                 self._emit(f"    lea rcx, [rbp - {arr_base}]")
-                 
-            self._emit("    add rcx, rax")
-            
-            # Load value to store
-            val = instr.result # ASTORE reuses result field for value
+                self._emit(f"    lea rcx, [rbp - {arr_base}]")
 
-            self._emit(f"    push rcx") # Save address
+            self._emit("    add rcx, rax")
+
+            # Load value to store
+            val = instr.result  # ASTORE reuses result field for value
+
+            self._emit(f"    push rcx")  # Save address
             self._load_to_rax(val)      # RAX = value
-            self._emit("    mov r9, rax") # Save value to R9 avoiding pop clobber
+            # Save value to R9 avoiding pop clobber
+            self._emit("    mov r9, rax")
             self._emit("    pop rcx")   # Restore address
             self._emit("    mov [rcx], r9")
 
@@ -249,47 +266,47 @@ class X86Generator:
         elif instr.opcode == OpCode.PARAM:
             self._pending_params.append((instr.arg1, False))
             # Don't emit anything yet.
-            
+
         elif instr.opcode == OpCode.PARAM_REF:
             self._pending_params.append((instr.arg1, True))
 
         elif instr.opcode == OpCode.CALL:
             # CALL func_name, num_args
             # Flush params in REVERSE order.
-            
+
             # self._pending_params should have num_args items.
             # We pop/clear them.
-            
+
             func_name = instr.arg1
             num_args = instr.arg2
-            
+
             # Ensure we take exactly num_args from pending (if nested calls exist?)
             # Since linear IR, `PARAM; CALL;` is standard.
             # Pending should match.
-            
+
             args_to_push = self._pending_params[-num_args:]
             self._pending_params = self._pending_params[:-num_args]
-            
+
             for arg, is_ref in reversed(args_to_push):
                 if is_ref:
                     # Push array address!
                     arr_base = self.current_frame.get_offset(arg)
                     if self.current_frame.is_reference(arg):
-                         self._emit(f"    mov rax, [rbp - {arr_base}]")
+                        self._emit(f"    mov rax, [rbp - {arr_base}]")
                     else:
-                         self._emit(f"    lea rax, [rbp - {arr_base}]")
+                        self._emit(f"    lea rax, [rbp - {arr_base}]")
                     self._emit("    push rax")
                 else:
                     # Push value
                     self._load_to_rax(arg)
                     self._emit("    push rax")
-                
+
             self._emit(f"    call {func_name}")
-            
+
             # Cleanup Stack
             if num_args > 0:
                 self._emit(f"    add rsp, {num_args * 8}")
-                
+
             self._store_rax(instr.result)
 
         elif instr.opcode == OpCode.LOAD_PARAM:
@@ -297,7 +314,7 @@ class X86Generator:
             offset = 16 + idx * 8
             self._emit(f"    mov rax, [rbp + {offset}]")
             self._store_rax(instr.result)
-            
+
         elif instr.opcode == OpCode.LOAD_PARAM_REF:
             idx = instr.arg1
             offset = 16 + idx * 8

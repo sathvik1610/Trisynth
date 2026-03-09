@@ -126,9 +126,6 @@ class ASTPrinter:
     def format(self, root_node):
         self.output = []
         self.print_tree(root_node, "", True)
-    def format(self, root_node):
-        self.output = []
-        self.print_tree(root_node, "", True)
         return "\n".join(self.output)
 
 class IRInterpreter:
@@ -407,6 +404,15 @@ def process_source(source_code):
                 for instr in current_ir:
                     print(f"    {instr}")
         print("\n  ✅ Optimization Complete")
+    except Exception as e:
+        print(f"  ❌ Failed: {e}")
+        return
+
+    print("\n[6] Execution:")
+    try:
+        interpreter = IRInterpreter(current_ir)
+        interpreter.run()
+        print("\n  ✅ Execution Complete")
     except Exception as e:
         print(f"  ❌ Failed: {e}")
 
