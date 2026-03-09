@@ -1,0 +1,38 @@
+// ============================================================
+//  DEMO 3 — Optimised IR + Interpretation
+//
+//  A real-world style program: finds the sum and maximum value
+//  inside a fixed array, then prints both results.
+//
+//  Shows the full pipeline:
+//    Source → Tokens → AST → Semantic Check
+//    → Raw IR → Optimised IR → Interpreted Output
+// ============================================================
+
+// Return the larger of two integers
+int max(int a, int b) {
+    if (a > b) { return a; }
+    return b;
+}
+
+void main() {
+    int data[5];
+    data[0] = 3;
+    data[1] = 7;
+    data[2] = 2;
+    data[3] = 9;
+    data[4] = 5;
+
+    int sum = 0;
+    int best = 0;
+    int i = 0;
+
+    while (i < 5) {
+        sum = sum + data[i];
+        best = max(best, data[i]);
+        ++i;
+    }
+
+    print(sum);     // 26  (3+7+2+9+5)
+    print(best);    // 9   (largest element)
+}

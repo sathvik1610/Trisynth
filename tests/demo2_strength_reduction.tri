@@ -1,0 +1,33 @@
+// ============================================================
+//  DEMO 2 — Strength Reduction
+//
+//  The compiler automatically replaces expensive multiply/divide
+//  operations with cheaper bit-shift instructions when the
+//  operand is a power of 2.
+//
+//  Transformations you will see in the IR:
+//    x * 2   →   x << 1      (left shift by 1)
+//    x * 4   →   x << 2      (left shift by 2)
+//    x * 8   →   x << 3      (left shift by 3)
+//    x / 2   →   x >> 1      (right shift by 1)
+//    x / 4   →   x >> 2      (right shift by 2)
+// ============================================================
+
+void main() {
+    int x = 6;
+
+    // Multiplications by powers of 2 → replaced with LSHIFT
+    int a = x * 2;     // IR: x << 1  = 12
+    int b = x * 4;     // IR: x << 2  = 24
+    int c = x * 8;     // IR: x << 3  = 48
+
+    // Divisions by powers of 2 → replaced with RSHIFT
+    int d = x / 2;     // IR: x >> 1  = 3
+    int e = x / 4;     // IR: x >> 2  = 1
+
+    print(a);   // 12
+    print(b);   // 24
+    print(c);   // 48
+    print(d);   // 3
+    print(e);   // 1
+}

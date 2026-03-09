@@ -1,0 +1,34 @@
+// ============================================================
+//  DEMO 1 — Dead Code Elimination
+//
+//  The compiler removes any code that can NEVER be reached.
+//  Look at the IR before vs after this optimisation pass.
+//
+//  Dead blocks in this program:
+//    • The "else" branch of  if (1 == 1)  — always false, never entered
+//    • The statement after  return  inside check()
+// ============================================================
+
+// A function with an unreachable statement after return
+int check(int n) {
+    if (n > 0) {
+        return 1;
+    }
+    return 0;
+    // nothing below here — but imagine dead code was placed here
+}
+
+void main() {
+    int x = 10;
+
+    // Condition is always TRUE  →  else-branch is dead code
+    if (1 == 1) {
+        print(x);        // always runs  →  prints 10
+    } else {
+        print(999);      // DEAD — never reachable
+    }
+
+    // Normal function call — result is 1 because n=5 > 0
+    int result = check(5);
+    print(result);       // prints 1
+}
