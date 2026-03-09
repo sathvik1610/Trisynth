@@ -1,0 +1,16 @@
+// TEST 07 — Const variables & nested scope shadowing
+// Expected output: 100  2  100
+
+void main() {
+    const int MAX = 100;
+    int x = 1;
+
+    print(MAX);     // 100
+
+    {
+        int x = 2;  // shadows outer x in this block
+        print(x);   // 2
+    }
+
+    print(MAX);     // still 100 — const unchanged
+}

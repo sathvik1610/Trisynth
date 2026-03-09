@@ -1,0 +1,29 @@
+// TEST 08 — Boolean logic
+// Expected output:
+//   1  (true || false => true)
+//   0  (false && true => false, else branch: print 0)
+//   1  (!(false) => true)
+
+void main() {
+    bool t = true;
+    bool f = false;
+
+    if (t || f) {
+        print(1);
+    } else {
+        print(0);
+    }
+
+    if (f && t) {
+        print(1);
+    } else {
+        print(0);
+    }
+
+    bool inv = !f;
+    if (inv) {
+        print(1);
+    } else {
+        print(0);
+    }
+}

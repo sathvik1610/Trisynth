@@ -37,10 +37,12 @@ class OpCode(Enum):
     CALL = auto()        
     PARAM = auto()       # PARAM val (push argument)
     LOAD_PARAM = auto()  # LOAD_PARAM index (load argument to local)
-    
     # Memory / Arrays
+    ARR_DECL = auto()  # ARR_DECL array_name, size
     ALOAD = auto()     # ALOAD dest, array_name, index
     ASTORE = auto()    # ASTORE array_name, index, src_val
+    PARAM_REF = auto() # PARAM_REF array_name (push address of array)
+    LOAD_PARAM_REF = auto() # LOAD_PARAM_REF index (load array address argument to local ref)
 
     # I/O
     PRINT = auto()       # PRINT src

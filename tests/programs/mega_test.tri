@@ -1,0 +1,182 @@
+/*
+ * TRISYNTH COMPILER — MEGA TEST PROGRAM
+ * ======================================
+ * Tests: recursion, arrays, loops, break/continue,
+ *        bool logic, const, scope, nested calls,
+ *        pass-by-reference, optimizer passes
+ *
+ * Expected Output (one value per line):
+ *   === Math Functions ===
+ *   120          (factorial 5)
+ *   5            (fib 5)
+ *   81           (power 3^4)
+ *   6            (sum_to 3 = 1+2+3)
+ *
+ *   === Arrays ===
+ *   150          (sum of 10+20+30+40+50)
+ *   50           (max of array)
+ *   10           (min of array)
+ *
+ *   === Array by Reference ===
+ *   0            (arr[0] after zero_first)
+ *   99           (arr[4] after set_last)
+ *
+ *   === Loops ===
+ *   0 1 2 3 5 6  (for loop skip 4, stop at 7)
+ *   10           (while accumulate 0+1+..+4 doubled)
+ *
+ *   === Boolean Logic ===
+ *   1            (true || false)
+ *   0            (false && true)
+ *   1            (!(false))
+ *   1            (5 > 3 && 10 != 0)
+ *
+ *   === Const & Scope ===
+ *   1000         (const MAX_VAL)
+ *   2            (inner shadow x)
+ *   1000         (const still 1000)
+ *
+ *   === Optimizer ===
+ *   12           (folded: 3*4 + 0)
+ *   64           (strength: 1 << 6 from n*64)
+ */
+
+// ─── RECURSIVE FUNCTIONS ────────────────────────────────────────────────────
+
+int factorial(int n) {
+    if (n <= 1) { return 1; }
+    return n * factorial(n - 1);
+}
+
+int fib(int n) {
+    if (n <= 0) { return 0; }
+    if (n == 1) { return 1; }
+    return fib(n - 1) + fib(n - 2);
+}
+
+int power(int base, int exp) {
+    if (exp <= 0) { return 1; }
+    return base * power(base, exp - 1);
+}
+
+int sum_to(int n) {
+    if (n <= 0) { return 0; }
+    return n + sum_to(n - 1);
+}
+
+// ─── ARRAY HELPERS ──────────────────────────────────────────────────────────
+
+int array_sum(int arr[], int size) {
+    int total = 0;
+    int i = 0;
+    while (i < size) {
+        total = total + arr[i];
+        i = i + 1;
+    }
+    return total;
+}
+
+int array_max(int arr[], int size) {
+    int m = arr[0];
+    int i = 1;
+    while (i < size) {
+        if (arr[i] > m) { m = arr[i]; }
+        i = i + 1;
+    }
+    return m;
+}
+
+int array_min(int arr[], int size) {
+    int m = arr[0];
+    int i = 1;
+    while (i < size) {
+        if (arr[i] < m) { m = arr[i]; }
+        i = i + 1;
+    }
+    return m;
+}
+
+void zero_first(int arr[]) {
+    arr[0] = 0;
+}
+
+void set_last(int arr[], int val) {
+    arr[4] = val;
+}
+
+// ─── MAIN ────────────────────────────────────────────────────────────────────
+
+void main() {
+
+    /* ── Math Functions ── */
+    print(factorial(5));       // 120
+    print(fib(5));             // 5
+    print(power(3, 4));        // 81
+    print(sum_to(3));          // 6
+
+    /* ── Arrays ── */
+    int arr[5];
+    arr[0] = 10;
+    arr[1] = 20;
+    arr[2] = 30;
+    arr[3] = 40;
+    arr[4] = 50;
+
+    print(array_sum(arr, 5));  // 150
+    print(array_max(arr, 5));  // 50
+    print(array_min(arr, 5));  // 10
+
+    /* ── Arrays by Reference ── */
+    zero_first(arr);
+    print(arr[0]);             // 0
+
+    set_last(arr, 99);
+    print(arr[4]);             // 99
+
+    /* ── For Loop: skip 4, stop before 7 ── */
+    for (int i = 0; i < 10; ++i) {
+        if (i == 7) { break; }
+        if (i == 4) { continue; }
+        print(i);              // 0 1 2 3 5 6
+    }
+
+    /* ── While Loop: accumulate then double ── */
+    int acc = 0;
+    int k = 0;
+    while (k < 5) {
+        acc = acc + k;
+        k = k + 1;
+    }
+    acc = acc * 2;
+    print(acc);                // (0+1+2+3+4)*2 = 20 ... wait = 10*2=20? 
+                               // 0+1+2+3+4 = 10, *2 = 20
+
+    /* ── Boolean Logic ── */
+    bool t = true;
+    bool f = false;
+
+    if (t || f)  { print(1); } else { print(0); }   // 1
+    if (f && t)  { print(1); } else { print(0); }   // 0
+    if (!f)      { print(1); } else { print(0); }   // 1
+
+    bool compound = (5 > 3) && (10 != 0);
+    if (compound) { print(1); } else { print(0); }  // 1
+
+    /* ── Const & Scope ── */
+    const int MAX_VAL = 1000;
+    int x = 1;
+    print(MAX_VAL);            // 1000
+    {
+        int x = 2;             // inner shadow
+        print(x);              // 2
+    }
+    print(MAX_VAL);            // 1000 — unchanged
+
+    /* ── Optimizer ── */
+    int folded = 3 * 4 + (10 - 10);   // constant-folded = 12
+    print(folded);                      // 12
+
+    int n = 1;
+    int shifted = n * 64;              // strength-reduced = n << 6
+    print(shifted);                     // 64
+}

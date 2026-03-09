@@ -1,0 +1,16 @@
+// TEST 09 — Optimizer showcase
+// Constant folding:   3 * 4 + (10 - 10) = 12
+// Strength reduction: n * 4 = n << 2 (n=5 => 20)
+// Dead code elim:     'dead' variable never printed — removed from IR
+// Expected output: 12  20
+
+void main() {
+    int folded = 3 * 4 + (10 - 10);   // compile-time = 12
+    print(folded);
+
+    int n = 5;
+    int shifted = n * 4;               // strength-reduced to n << 2 = 20
+    print(shifted);
+
+    int dead = 9999;                   // never used — DCE removes this
+}

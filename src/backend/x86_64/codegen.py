@@ -57,7 +57,11 @@ class X86Generator:
         # 1. Analyze Frame
         frame = StackFrame()
         for instr in instrs:
-            if instr.result:
+            if instr.opcode == OpCode.ARR_DECL:
+               frame.allocate(instr.result, size=instr.arg1 * 8)
+            elif instr.opcode == OpCode.LOAD_PARAM_REF:
+               frame.allocate(instr.result, is_ref=True)
+            elif instr.result and instr.opcode != OpCode.ARR_DECL:
                frame.allocate(instr.result)
         
         frame.finalize()
@@ -196,17 +200,10 @@ class X86Generator:
              self._emit(f"    je {instr.arg2}")
 
         # --- Memory / Arrays ---
-        elif instr.opcode == OpCode.ALOAD:
-            # ALOAD dest, arr_name, index
-            # addr = rbp - offset_base + index*8
-            # But wait, offset_base in StackFrame is the "bottom" of the array block?
-            # Or the top?
-            # StackFrame: allocate(16) -> current+=16. Offset=16. 
-            # Slot is [rbp-16] to [rbp-0].
-            # [rbp-16] is lowest address. [rbp-8] is highest.
-            # Array[0] is at lowest address.
-            # So Base = rbp - offset.
+        elif instr.opcode == OpCode.ARR_DECL:
+            pass # Already handled in frame analysis
             
+        elif instr.opcode == OpCode.ALOAD:
             idx_val = instr.arg2 # Register/Imm/Var
             
             # Load index to RAX
@@ -214,90 +211,47 @@ class X86Generator:
             self._emit("    imul rax, 8") # Scale
             
             arr_base = self.current_frame.get_offset(instr.arg1)
-            # Address = rbp - arr_base + RAX
-            self._emit(f"    lea rcx, [rbp - {arr_base}]")
+            
+            if self.current_frame.is_reference(instr.arg1):
+                # Array was passed as a parameter (reference)
+                self._emit(f"    mov rcx, [rbp - {arr_base}]")
+            else:
+                # Array is currently on the local stack
+                self._emit(f"    lea rcx, [rbp - {arr_base}]")
+                
             self._emit("    add rcx, rax")
             self._emit("    mov rdx, [rcx]")
             self._store_rax(instr.result, src_reg="rdx")
 
         elif instr.opcode == OpCode.ASTORE:
-            # ASTORE arr_name, index, value
-            
             idx_val = instr.arg2
             self._load_to_rax(idx_val)
             self._emit("    imul rax, 8")
             
             arr_base = self.current_frame.get_offset(instr.arg1)
-            self._emit(f"    lea rcx, [rbp - {arr_base}]")
+            if self.current_frame.is_reference(instr.arg1):
+                 self._emit(f"    mov rcx, [rbp - {arr_base}]")
+            else:
+                 self._emit(f"    lea rcx, [rbp - {arr_base}]")
+                 
             self._emit("    add rcx, rax")
             
             # Load value to store
             val = instr.result # ASTORE reuses result field for value
-            # Move value to RDX (since RAX used for address calc? No, we used RCX for addr)
-            # But _load_to_rax clobbers RAX.
-            # So:
-            # 1. Calc Addr in RCX
-            # 2. Load Val in RAX
-            # 3. Store RAX to [RCX]
-            # Valid.
-            
-            # wait, _load_to_rax might clobber RCX if it uses it for intermediate? 
-            # My current _load_to_rax doesn't use RCX.
-            
-            # HOWEVER, safest to maximize separation.
-            # Let's verify _load_to_rax implementation...
-            # It just does mov rax, [rbp-X] or imm. Safe.
-            
+
             self._emit(f"    push rcx") # Save address
             self._load_to_rax(val)      # RAX = value
+            self._emit("    mov r9, rax") # Save value to R9 avoiding pop clobber
             self._emit("    pop rcx")   # Restore address
-            self._emit("    mov [rcx], rax")
+            self._emit("    mov [rcx], r9")
 
         # --- Functions ---
         elif instr.opcode == OpCode.PARAM:
-            # PARAM val
-            # Push to stack.
-            # Note: We push Right-to-Left? 
-            # IR Gen emits PARAM a, PARAM b, CALL.
-            # If we push a, push b. Stack: [b, a].
-            # Callee: [rbp+16] -> b. [rbp+24] -> a.
-            # This is Reverse Order.
-            # Standard C: [rbp+16] -> first arg.
-            # So we need [rbp+16] -> a.
-            # This means we should have pushed b THEN a.
-            # But IR Gen emits PARAM a, PARAM b.
-            # So we are pushing in wrong order for standard C.
-            # But for INTERNAL functions, as long as LOAD_PARAM matches, it's fine.
-            # LOAD_PARAM 0 reads [rbp+16 + 0*8].
-            # If we pushed a, then b. Stack top is b.
-            # [rbp+16] is b.
-            # So LOAD_PARAM 0 gets b (the second param).
-            # LOAD_PARAM 1 gets a (the first param).
-            # This reverses arguments!
-            # FIX: LOAD_PARAM logic or Push logic.
-            # Simplest: Adjust LOAD_PARAM to read downwards? No, args are positive.
-            # We must Push in Reverse IR Order?
-            # Or IR Gen should emit PARAMs in reverse?
-            # Or LOAD_PARAM i maps to `rbp + 16 + (N-1-i)*8`?
-            # We don't know N (arg count) easily in LOAD_PARAM.
-            # We DO know N in CALL.
-            # But PARAM instructions handle the pushing.
-            # ISSUE: We need to push args in reverse order of IR?
-            # Or we accept that internal functions have inverted args on stack?
-            # If `main` calls `foo(1, 2)`.
-            # IR: PARAM 1, PARAM 2.
-            # Stack: Push 1, Push 2. Top: 2.
-            # Callee `foo(a, b)`:
-            # LOAD_PARAM 0 (a) -> Reads [rbp+16] -> 2.
-            # LOAD_PARAM 1 (b) -> Reads [rbp+24] -> 1.
-            # So `a=2`, `b=1`. Swapped.
-            # Critical Fix: IR Gen should emit params in reverse?
-            # Or Backend buffers PARAMs and pushes on CALL?
-            # Buffering is safest for Backend.
-            # Let's Buffer PARAMs.
-            
-            self._pending_params.append(instr.arg1)
+            self._pending_params.append((instr.arg1, False))
             # Don't emit anything yet.
+            
+        elif instr.opcode == OpCode.PARAM_REF:
+            self._pending_params.append((instr.arg1, True))
 
         elif instr.opcode == OpCode.CALL:
             # CALL func_name, num_args
@@ -316,19 +270,19 @@ class X86Generator:
             args_to_push = self._pending_params[-num_args:]
             self._pending_params = self._pending_params[:-num_args]
             
-            # Push in Reverse (Last arg pushed first -> Highest Address)
-            # Wait. C Conv: Last arg pushed first.
-            # foo(1, 2). Push 2. Push 1.
-            # Stack: [1, 2]. Top is 1.
-            # [rbp+16] is 1. Correct.
-            # So we must push in reverse list order?
-            # args_to_push is [1, 2].
-            # Reversed: [2, 1].
-            # Push 2, Push 1. Correct.
-            
-            for arg in reversed(args_to_push):
-                self._load_to_rax(arg)
-                self._emit("    push rax")
+            for arg, is_ref in reversed(args_to_push):
+                if is_ref:
+                    # Push array address!
+                    arr_base = self.current_frame.get_offset(arg)
+                    if self.current_frame.is_reference(arg):
+                         self._emit(f"    mov rax, [rbp - {arr_base}]")
+                    else:
+                         self._emit(f"    lea rax, [rbp - {arr_base}]")
+                    self._emit("    push rax")
+                else:
+                    # Push value
+                    self._load_to_rax(arg)
+                    self._emit("    push rax")
                 
             self._emit(f"    call {func_name}")
             
@@ -339,8 +293,12 @@ class X86Generator:
             self._store_rax(instr.result)
 
         elif instr.opcode == OpCode.LOAD_PARAM:
-            # LOAD_PARAM index (0-based)
-            # Reads [rbp + 16 + index*8]
+            idx = instr.arg1
+            offset = 16 + idx * 8
+            self._emit(f"    mov rax, [rbp + {offset}]")
+            self._store_rax(instr.result)
+            
+        elif instr.opcode == OpCode.LOAD_PARAM_REF:
             idx = instr.arg1
             offset = 16 + idx * 8
             self._emit(f"    mov rax, [rbp + {offset}]")

@@ -77,11 +77,11 @@ class DeadCodeElimination:
             return True
             
         # I/O and Function Calls
-        if instr.opcode in (OpCode.PRINT, OpCode.CALL, OpCode.PARAM):
+        if instr.opcode in (OpCode.PRINT, OpCode.CALL, OpCode.PARAM, OpCode.PARAM_REF, OpCode.LOAD_PARAM_REF, OpCode.LOAD_PARAM):
             return True
             
-        # Memory writes (Side effects)
-        if instr.opcode == OpCode.ASTORE:
+        # Memory/Array operations are side effects or must be preserved
+        if instr.opcode in (OpCode.ASTORE, OpCode.ARR_DECL, OpCode.ALOAD):
             return True
             
         return False

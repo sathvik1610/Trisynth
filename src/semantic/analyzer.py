@@ -14,6 +14,7 @@ class SemanticAnalyzer:
     def __init__(self):
         self.symbol_table = SymbolTable()
         self.loop_depth = 0
+        self.current_function = None  # (name, return_type) of the enclosing function
         self.symbol_table.define('readInt', 'int', category='function')
 
     def visit(self, node: ast.ASTNode):
@@ -56,13 +57,25 @@ class SemanticAnalyzer:
                 # Or we modify define() to allow redefinition of same type/category?
                 # Let's manually do it here to avoid changing SymbolTable too much.
                 
-                # 3. Define params
+                # 3. Define params and save to symbol (we need them for visit_CallExpr)
                 self.symbol_table.enter_scope()
+                param_types = []
                 for type_name, param_name in decl.params:
                     self.symbol_table.define(param_name, type_name, category='variable')
-                
-                # 4. Visit body
+                    param_types.append(type_name)
+
+                # Update the function symbol with param types
+                func_sym = self.symbol_table.resolve(decl.name)
+                func_sym.param_types = param_types
+
+                # 4. Visit body, tracking function context for return checking
+                prev_func = self.current_function
+                self.current_function = (decl.name, decl.return_type)
+                has_return = self._body_has_return(decl.body)
                 self.visit(decl.body)
+                if decl.return_type != 'void' and not has_return:
+                    raise Exception(f"Missing return statement in non-void function '{decl.name}'")
+                self.current_function = prev_func
                 self.symbol_table.exit_scope()
             else:
                 self.visit(decl)
@@ -85,8 +98,14 @@ class SemanticAnalyzer:
         self.symbol_table.enter_scope()
         
         # 3. Define parameters
+        param_types = []
         for type_name, param_name in node.params:
             self.symbol_table.define(param_name, type_name, category='variable')
+            param_types.append(type_name)
+            
+        # Update function symbol
+        func_sym = self.symbol_table.resolve(node.name)
+        func_sym.param_types = param_types
             
         # 4. Visit body
         self.visit(node.body) # Block will handle scope too? No, specialized handling needed.
@@ -219,10 +238,25 @@ class SemanticAnalyzer:
         if symbol.category != 'function':
              raise Exception(f"Semantic Error: '{node.callee}' is not a function.")
              
-        # TODO: Check argument count and types against symbol.
-        # Current Symbol class only stores type_name (return type). 
-        # Need to extend Symbol to store param types for full checking.
-        
+        # Check argument count and types against symbol.
+        if hasattr(symbol, 'param_types'):
+            if len(node.args) != len(symbol.param_types):
+                raise Exception(f"Type Error: Function '{node.callee}' expects {len(symbol.param_types)} arguments, got {len(node.args)}.")
+
+            for i, arg in enumerate(node.args):
+                arg_type = self.visit(arg)
+                expected_type = symbol.param_types[i]
+                param_name = None
+                # Try to get param name from function symbol if available
+                func_sym = self.symbol_table.resolve(node.callee)
+                if func_sym and hasattr(func_sym, 'param_names') and i < len(func_sym.param_names):
+                    param_name = func_sym.param_names[i]
+
+                if arg_type != expected_type:
+                    raise Exception(
+                        f"Type Error: Argument {i+1} of '{node.callee}' expects '{expected_type}', got '{arg_type}'."
+                    )
+
         return symbol.type_name
     def visit_ArrayDecl(self, node: ast.ArrayDecl):
         # type_name is element type (e.g. 'int')
@@ -234,15 +268,15 @@ class SemanticAnalyzer:
         symbol = self.symbol_table.resolve(node.name)
         if not symbol:
             raise Exception(f"Semantic Error: Undeclared array '{node.name}'.")
-        
+
         if not symbol.type_name.endswith("[]"):
             raise Exception(f"Type Error: '{node.name}' is not an array.")
-            
+
         index_type = self.visit(node.index)
         if index_type != 'int':
             raise Exception(f"Type Error: Array index must be int, got '{index_type}'.")
-            
-        return symbol.type_name[:-2] # Return base type (e.g. 'int')
+
+        return symbol.type_name[:-2]  # e.g. 'int'[] -> 'int'
 
     def visit_ArrayAssignment(self, node: ast.ArrayAssignment) -> str:
         symbol = self.symbol_table.resolve(node.name)
@@ -254,7 +288,7 @@ class SemanticAnalyzer:
             
         index_type = self.visit(node.index)
         if index_type != 'int':
-             raise Exception(f"Type Error: Array index must be int, got '{index_type}'.")
+            raise Exception(f"Type Error: Array index must be int, got '{index_type}'.")
              
         value_type = self.visit(node.value)
         base_type = symbol.type_name[:-2]
@@ -292,10 +326,31 @@ class SemanticAnalyzer:
         if self.loop_depth == 0:
             raise Exception("Semantic Error: 'continue' outside of loop.")
 
+    def _body_has_return(self, node) -> bool:
+        """Conservative check: does this block always reach a return statement?"""
+        import src.frontend.ast as ast_mod
+        if isinstance(node, ast_mod.Block):
+            for stmt in node.statements:
+                if self._body_has_return(stmt):
+                    return True
+            return False
+        elif isinstance(node, ast_mod.ReturnStmt):
+            return True
+        elif isinstance(node, ast_mod.IfStmt):
+            # Only guaranteed if BOTH branches return
+            then_returns = self._body_has_return(node.then_branch)
+            else_returns = node.else_branch is not None and self._body_has_return(node.else_branch)
+            return then_returns and else_returns
+        elif isinstance(node, ast_mod.WhileStmt):
+            return False  # Conservative: loop may not execute
+        elif isinstance(node, ast_mod.ForStmt):
+            return False
+        return False
+
     def visit_LogicalExpr(self, node: ast.LogicalExpr) -> str:
         left_type = self.visit(node.left)
         right_type = self.visit(node.right)
-        
-        if left_type != 'bool' or right_type != 'bool':
-             raise Exception(f"Type Error: Logical operators require bool operands, got '{left_type}' and '{right_type}'.")
+
+        if left_type not in ('bool', 'int') or right_type not in ('bool', 'int'):
+            raise Exception(f"Type Error: Logical operators require bool operands, got '{left_type}' and '{right_type}'.")
         return 'bool'

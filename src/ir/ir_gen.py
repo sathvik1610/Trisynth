@@ -10,14 +10,15 @@ class IRGenerator:
         self.instructions: List[Instruction] = []
         self._temp_counter = 0
         self._label_counter = 0
-        
+
         # Scope Management for Unique Renaming
-        # Stack of dicts: {source_name: unique_ir_name}
-        self.scopes = [{}] 
+        self.scopes = [{}]
         self._var_counter = 0
 
+        # Track all declared array *unique* names so PARAM_REF is emitted correctly
+        self._array_names: set = set()
+
         # Loop Control Stack for break/continue
-        # Stack of tuples: (continue_label, break_label)
         self.loop_stack = []
 
     def generate(self, program: ast.Program) -> List[Instruction]:
@@ -85,25 +86,24 @@ class IRGenerator:
             self._emit(OpCode.MOV, arg1=value_src, result=unique_name)
 
     def visit_ArrayDecl(self, node: ast.ArrayDecl):
-        # int x[10]; -> Just register unique name or emit alloc?
-        # Since we don't have malloc, and stack is implicit, 
-        # we treat 'x' as base pointer/name.
+        # int x[10]; -> ARR_DECL x_N, size
         unique_name = self._get_unique_name(node.name)
         self.scopes[-1][node.name] = unique_name
-        # Optional: Emit ARR_DECL x_N size (for backend stack alloc info)
-        # self._emit(OpCode.ARR_DECL, arg1=node.size, result=unique_name)
-        # For our simple IR, ALOAD/ASTORE will just use unique_name.
-        pass
+        self._array_names.add(unique_name)  # Track for PARAM_REF detection in call sites
+        self._emit(OpCode.ARR_DECL, arg1=node.size, result=unique_name)
 
     def visit_FunctionDecl(self, node: ast.FunctionDecl):
         self._emit(OpCode.FUNC_START, arg1=node.name)
         self._enter_scope()
         
-        for i, (_, param_name) in enumerate(node.params):
+        for i, (type_name, param_name) in enumerate(node.params):
             unique_name = self._get_unique_name(param_name)
             self.scopes[-1][param_name] = unique_name
-            # Emit LOAD_PARAM index, result=unique_name
-            self._emit(OpCode.LOAD_PARAM, arg1=i, result=unique_name)
+            # Emit LOAD_PARAM or LOAD_PARAM_REF
+            if type_name.endswith("[]"):
+                self._emit(OpCode.LOAD_PARAM_REF, arg1=i, result=unique_name)
+            else:
+                self._emit(OpCode.LOAD_PARAM, arg1=i, result=unique_name)
 
         self.visit(node.body) 
         self._exit_scope()
@@ -237,13 +237,24 @@ class IRGenerator:
 
     def visit_CallExpr(self, node: ast.CallExpr) -> str:
         # Evaluate arguments
-        arg_temp_names = []
+        arg_info = []  # (temp_name, is_array)
         for arg in node.args:
-            arg_temp_names.append(self.visit(arg))
+            # Only emit PARAM_REF for actual array variables (tracked in _array_names)
+            if isinstance(arg, ast.Variable):
+                resolved = self._resolve(arg.name)
+                if resolved in self._array_names:
+                    arg_info.append((resolved, True))
+                else:
+                    arg_info.append((resolved, False))
+            else:
+                arg_info.append((self.visit(arg), False))
             
-        # Push arguments (PARAM)
-        for temp_name in arg_temp_names:
-            self._emit(OpCode.PARAM, arg1=temp_name)
+        # Push arguments (PARAM or PARAM_REF)
+        for temp_name, is_array in arg_info:
+            if is_array:
+                self._emit(OpCode.PARAM_REF, arg1=temp_name)
+            else:
+                self._emit(OpCode.PARAM, arg1=temp_name)
             
         result = self._new_temp()
         # CALL func_name, num_args -> result
@@ -394,3 +405,11 @@ class IRGenerator:
         target_name = self._resolve(node.name) # Must exist
         self._emit(OpCode.MOV, arg1=value, result=target_name)
         return target_name
+
+    def _is_array(self, name: str) -> bool:
+        """Helper to check if a symbol in the AST/Semantic is an array."""
+        # The SemanticAnalyzer knows this, but IRGen doesn't have symbol table directly.
+        # We need to rely on the AST node or keep a quick track.
+        # How to know without SymbolTable?
+        # A hacky way: IRGen knows ArrayDecl was visited.
+        return f"{name}[]" in [k + "[]" for s in self.scopes for k in s] # Not very reliable because we don't store type.
