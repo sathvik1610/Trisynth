@@ -311,4 +311,5 @@ class X86Generator:
         self.output.append("")
 
     def _emit_footer(self):
-        pass
+        self._emit("")
+        self._emit("section .note.GNU-stack noalloc noexec nowrite progbits")

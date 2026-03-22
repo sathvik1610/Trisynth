@@ -347,4 +347,4 @@ class RISCVGenerator:
         self.output.append("")
 
     def _emit_footer(self):
-        pass
+        self._emit("")  # trailing newline — fixes "end of file not at end of a line" warning
