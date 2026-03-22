@@ -1,0 +1,94 @@
+// ============================================================
+//  MASTER DEMO — Full Optimization Pipeline Stress Test
+//
+//  Covers:
+//   1. Strength Reduction
+//   2. Common Subexpression Elimination (CSE)
+//   3. Copy Propagation
+//   4. Constant Folding & Propagation
+//   5. Dead Code Elimination (ALL types)
+//
+//  This program is intentionally complex to ensure optimizations
+//  interact and do not mask each other.
+// ============================================================
+
+int helper(int a, int b) {
+    // Unreachable after return (tests DCE)
+    if (a > b) {
+        return a;
+    }
+    return b;
+    // DEAD (should be removed if added later)
+}
+
+void main() {
+    // -------------------------------
+    // Base values
+    // -------------------------------
+    int x = 16;
+    int y = 8;
+
+    // -------------------------------
+    // 1. Strength Reduction
+    // -------------------------------
+    int sr_a = x * 2;     // → LSHIFT x 1
+    int sr_b = x * 4;     // → LSHIFT x 2
+    int sr_c = y / 2;     // → RSHIFT y 1
+
+    // -------------------------------
+    // 2. CSE (nested + repeated)
+    // -------------------------------
+    int expr1 = (x * y) + (x * y);     // same expression twice
+    int expr2 = (x * y) + 10;          // reuse again
+
+    // -------------------------------
+    // 3. Copy Propagation (chain + reuse)
+    // -------------------------------
+    int c1 = expr1;
+    int c2 = c1;
+    int c3 = c2;
+
+    int alias = c3;   // deeper chain
+
+    // -------------------------------
+    // 4. Mixed Constant Folding
+    // -------------------------------
+    int folded = (10 * 5) + (20 / 2);   // → 50 + 10 = 60
+
+    // -------------------------------
+    // 5. Constant Branch (DCE)
+    // -------------------------------
+    if (3 > 1) {
+        // This survives
+        int temp = alias + folded;
+
+        // More copy propagation opportunity
+        int temp2 = temp;
+        int temp3 = temp2;
+
+        print(temp3);
+    } else {
+        // DEAD BLOCK
+        print(999);
+    }
+
+    // -------------------------------
+    // 6. Function Call + Dead Code Interaction
+    // -------------------------------
+    int res = helper(5, 3);  // → returns 5
+
+    // Copy chain on result
+    int r1 = res;
+    int r2 = r1;
+
+    print(r2);
+
+    // -------------------------------
+    // 7. Extra redundant expressions
+    // -------------------------------
+    int extra1 = (x * y);
+    int extra2 = (x * y);   // should reuse
+
+    print(extra1);
+    print(extra2);
+}

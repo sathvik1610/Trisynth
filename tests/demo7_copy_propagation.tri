@@ -1,0 +1,23 @@
+// ============================================================
+//  DEMO 7 — Copy Propagation
+//
+//  Demonstrates cleaning up IR by tracking variables that are
+//  simply copies of other variables. 
+//  The compiler replaces uses of the "copy" with the original
+//  value, which makes the copy itself useless, allowing Dead
+//  Code Elimination to completely delete it!
+// ============================================================
+
+void main() {
+    int original = 42;
+    
+    // These are just redundant copies bouncing the value around
+    int copy1 = original;
+    int copy2 = copy1;
+    int copy3 = copy2;
+    
+    // We print the final copy. 
+    // Look at the IR: Copy Propagation changes this to `print(42)`.
+    // Then Dead Code Elimination deletes `copy1`, `copy2`, and `copy3` entirely!
+    print(copy3);
+}

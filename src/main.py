@@ -10,29 +10,32 @@ def main():
     parser = argparse.ArgumentParser(description="Trisynth Compiler")
     parser.add_argument('file', nargs='?', help="Source file to compile")
     parser.add_argument('--demo', action='store_true', help="Run in interactive demo mode")
+    parser.add_argument('--arch', choices=['x86', 'riscv', 'both'], default='both',
+                        help="Target architecture for code generation (default: both)")
     
     args = parser.parse_args()
 
     if args.demo or not args.file:
-        run_demo()
+        run_demo(args.arch)
     else:
-        compile_file(args.file)
+        compile_file(args.file, args.arch)
 
-def run_demo():
+def run_demo(arch='both'):
     print("Trisynth Compiler Interactive Mode")
     print("----------------------------------")
-    print("Type your code below (press Ctrl+Z then Enter to finish):")
+    print("Type your code below (press Ctrl+D on Linux/Mac or Ctrl+Z then Enter on Windows to finish):")
     try:
         source_code = sys.stdin.read()
-        process_source(source_code)
-    except KeyboardInterrupt:
+        if source_code.strip():
+            process_source(source_code, arch)
+    except (KeyboardInterrupt, EOFError):
         return
 
-def compile_file(filepath):
+def compile_file(filepath, arch='both'):
     try:
         with open(filepath, 'r') as f:
             source_code = f.read()
-        process_source(source_code)
+        process_source(source_code, arch)
     except FileNotFoundError:
         print(f"Error: File '{filepath}' not found.")
     except Exception as e:
@@ -290,7 +293,7 @@ class IRInterpreter:
                 
             self.pc += 1
 
-def process_source(source_code):
+def process_source(source_code, arch='both'):
     print("\n==================================")
     print("           PROGRAM OUTPUT           ")
     print("==================================\n")
@@ -315,9 +318,15 @@ def process_source(source_code):
         from src.optimization.dead_code import DeadCodeElimination
         from src.optimization.strength_reduction import StrengthReduction
         
+        from src.optimization.cse import CommonSubexpressionElimination
+        from src.optimization.copy_propagation import CopyPropagation
+
         optimizer = Optimizer()
-        optimizer.add_pass(ConstantFolding())
         optimizer.add_pass(StrengthReduction())
+        optimizer.add_pass(CommonSubexpressionElimination())
+        optimizer.add_pass(CopyPropagation())
+        optimizer.add_pass(ConstantFolding())
+        optimizer.add_pass(CommonSubexpressionElimination())
         optimizer.add_pass(DeadCodeElimination())
         optimized_ir = optimizer.optimize(ir)
         
@@ -382,6 +391,8 @@ def process_source(source_code):
     from src.optimization.constant_fold import ConstantFolding
     from src.optimization.dead_code import DeadCodeElimination
     from src.optimization.strength_reduction import StrengthReduction
+    from src.optimization.cse import CommonSubexpressionElimination
+    from src.optimization.copy_propagation import CopyPropagation
     try:
         # Instead of generic optimizer, let's run passes manually to show steps
         print("  --- Initial IR ---")
@@ -389,8 +400,11 @@ def process_source(source_code):
              print(f"    {instr}")
              
         passes = [
-            ("Constant Folding", ConstantFolding()),
             ("Strength Reduction", StrengthReduction()),
+            ("Common Subexp Elimination", CommonSubexpressionElimination()),
+            ("Copy Propagation", CopyPropagation()),
+            ("Constant Folding", ConstantFolding()),
+            ("Post-Folding Cleanup", CommonSubexpressionElimination()), # Cleans identical folded constants
             ("Dead Code Elimination", DeadCodeElimination())
         ]
         
@@ -415,6 +429,62 @@ def process_source(source_code):
         print("\n  ✅ Execution Complete")
     except Exception as e:
         print(f"  ❌ Failed: {e}")
+
+    print("\n[7] X86-64 Code Generation (NASM):")
+    if arch in ('x86', 'both'):
+        try:
+            from src.backend.codegen_x86 import X86Generator
+            x86_gen = X86Generator()
+            asm_code = x86_gen.generate(current_ir)
+
+            print()
+            for line in asm_code.splitlines():
+                print(f"  {line}")
+
+            output_path = "output.asm"
+            with open(output_path, "w") as f:
+                f.write(asm_code)
+
+            print(f"\n  ✅ Assembly written to '{output_path}'")
+            print(f"  Assemble & link (Linux/WSL):")
+            print(f"    nasm -f elf64 {output_path} -o output.o")
+            print(f"    gcc output.o -o program -no-pie")
+            print(f"    ./program")
+        except Exception as e:
+            import traceback
+            print(f"  ❌ Failed: {e}")
+            traceback.print_exc()
+    else:
+        print("  (skipped — use --arch x86 or --arch both)")
+
+    print("\n[8] RISC-V 64-bit Code Generation (GNU AS):")
+    if arch in ('riscv', 'both'):
+        try:
+            from src.backend.codegen_riscv import RISCVGenerator
+            riscv_gen = RISCVGenerator()
+            riscv_code = riscv_gen.generate(current_ir)
+
+            print()
+            for line in riscv_code.splitlines():
+                print(f"  {line}")
+
+            riscv_path = "output_riscv.s"
+            with open(riscv_path, "w") as f:
+                f.write(riscv_code)
+
+            print(f"\n  ✅ Assembly written to '{riscv_path}'")
+            print(f"  Cross-compile & run (requires riscv64 toolchain):")
+            print(f"    riscv64-linux-gnu-gcc {riscv_path} -o program_riscv -static")
+            print(f"    qemu-riscv64 ./program_riscv")
+            print(f"  Or on a native RISC-V board/VM:")
+            print(f"    gcc {riscv_path} -o program_riscv")
+            print(f"    ./program_riscv")
+        except Exception as e:
+            import traceback
+            print(f"  ❌ Failed: {e}")
+            traceback.print_exc()
+    else:
+        print("  (skipped — use --arch riscv or --arch both)")
 
 if __name__ == "__main__":
     main()

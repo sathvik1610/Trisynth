@@ -9,22 +9,51 @@ class ConstantFolding:
     IR Format handled: OP dest src1 src2
     """
     def run(self, instructions: List[Instruction]) -> List[Instruction]:
-        # Dictionary to store known constant values for variables: {var_name: value}
-        # Note: This simple propagation assumes linear execution and no reassignment issues 
-        # within the block (SSA-like behavior or relying on unique temp names helps).
-        # Since our IR uses unique names for temps, this is mostly safe for temps.
-        # User variables might be reassigned (MOV x 10 ... MOV x 20), so we must be careful.
-        # Current valid strategy: Update map on definition.
+        # Pre-scan: identify variables assigned exactly once IN THE ENTRY BLOCK of each function.
+        # These are safe to propagate globally across labels within that function.
+        func_assign_counts = {}  # func_name -> {var_name: count}
+        func_entry_vars = {}     # func_name -> set(var_name)
+        
+        current_func = None
+        in_entry_block = False
+        
+        for instr in instructions:
+            if instr.opcode == OpCode.FUNC_START:
+                current_func = instr.arg1
+                func_assign_counts[current_func] = {}
+                func_entry_vars[current_func] = set()
+                in_entry_block = True
+                continue
+                
+            if current_func is None:
+                continue
+                
+            if instr.opcode in (OpCode.LABEL, OpCode.JMP, OpCode.JMP_IF_FALSE):
+                in_entry_block = False
+                
+            if instr.result and instr.opcode != OpCode.ASTORE:
+                func_assign_counts[current_func][instr.result] = func_assign_counts[current_func].get(instr.result, 0) + 1
+                if in_entry_block:
+                    func_entry_vars[current_func].add(instr.result)
+
+        current_func = None
+        global_constants = {}
         constants = {}
         
         optimized = []
+        from copy import copy
         for instr in instructions:
+            instr = copy(instr)
+            
             # SAFETY GUARD: Control Flow Boundaries
-            # If we hit a label or function start, we enter a new basic block (or merge point).
-            # We must assume all previously known variable values are invalid because we 
-            # could have arrived here from a path where they have different values.
-            if instr.opcode in (OpCode.LABEL, OpCode.FUNC_START):
+            if instr.opcode == OpCode.FUNC_START:
+                current_func = instr.arg1
                 constants.clear()
+                global_constants.clear()
+            elif instr.opcode == OpCode.LABEL:
+                constants.clear()
+                # Restore function-level global constants
+                constants.update(global_constants)
 
             # 1. Substitute operands if they are known constants
             if isinstance(instr.arg1, str) and instr.arg1 in constants:
@@ -37,13 +66,50 @@ class ConstantFolding:
             
             # 3. Update constants map if this instruction defines a constant
             if folded_instr.result:
-                # Case A: MOV dest, constant
                 if folded_instr.opcode == OpCode.MOV and self._is_constant(folded_instr.arg1):
                     constants[folded_instr.result] = folded_instr.arg1
+                    # Global constant promotion if safe
+                    if current_func and func_assign_counts[current_func].get(folded_instr.result, 0) == 1:
+                        if folded_instr.result in func_entry_vars[current_func]:
+                            global_constants[folded_instr.result] = folded_instr.arg1
             
             optimized.append(folded_instr)
             
-        return optimized
+        # 4. Peephole Branch Optimization
+        # Pass 1: Remove never-taken branch, convert always-taken branch
+        no_dead_branches = []
+        for instr in optimized:
+            if instr.opcode == OpCode.JMP_IF_FALSE and self._is_constant(instr.arg1):
+                if instr.arg1 != 0:
+                    continue  # Condition always True -> branch never taken -> Drop instruction
+                else:
+                    # Condition always False -> branch ALWAYS taken -> Convert to Unconditional JMP
+                    instr.opcode = OpCode.JMP
+                    instr.arg1 = instr.arg2
+                    instr.arg2 = None
+            no_dead_branches.append(instr)
+            
+        # Pass 2: Remove redundant unconditional JMP to the very next instruction
+        final_optimized = []
+        for i, instr in enumerate(no_dead_branches):
+            if instr.opcode == OpCode.JMP:
+                # Look ahead to see if the immediate next instruction is the target label
+                # (skipping over other labels)
+                is_redundant = False
+                for j in range(i + 1, len(no_dead_branches)):
+                    next_instr = no_dead_branches[j]
+                    if next_instr.opcode == OpCode.LABEL:
+                        if next_instr.arg1 == instr.arg1:
+                            is_redundant = True
+                            break
+                    else:
+                        break # Not a label, stop looking
+                if is_redundant:
+                    continue
+                    
+            final_optimized.append(instr)
+
+        return final_optimized
 
     def _fold(self, instr: Instruction) -> Instruction:
         # We only look for arithmetic ops: ADD, SUB, MUL, DIV, MOD

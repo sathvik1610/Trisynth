@@ -99,17 +99,15 @@ class IRGenerator:
         for i, (type_name, param_name) in enumerate(node.params):
             unique_name = self._get_unique_name(param_name)
             self.scopes[-1][param_name] = unique_name
-            # Emit LOAD_PARAM or LOAD_PARAM_REF
             if type_name.endswith("[]"):
                 self._emit(OpCode.LOAD_PARAM_REF, arg1=i, result=unique_name)
             else:
                 self._emit(OpCode.LOAD_PARAM, arg1=i, result=unique_name)
 
-        self.visit(node.body) 
+        self.visit(node.body)
         self._exit_scope()
         
-        if self.instructions[-1].opcode != OpCode.RETURN:
-             self._emit(OpCode.FUNC_END, arg1=node.name)
+        self._emit(OpCode.FUNC_END, arg1=node.name)  # ← always emit, no condition
 
     def visit_Block(self, node: ast.Block):
         self._enter_scope()
@@ -151,6 +149,7 @@ class IRGenerator:
 
         self._emit(OpCode.LABEL, arg1=label_end)
         self.loop_stack.pop()
+
 
     def visit_ForStmt(self, node: ast.ForStmt):
         # for (init; cond; update) body

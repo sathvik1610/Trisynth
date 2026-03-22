@@ -1,0 +1,24 @@
+// ============================================================
+//  DEMO 5 — Constant Folding & Constant Condition Elimination
+//
+//  Demonstrates evaluating all known constants at compile time
+//  instead of wasting cycles doing math at runtime. 
+//  Also shows that constant `if` conditions evaluate early,
+//  allowing the Dead Code pass to cleanly remove the dead branch.
+// ============================================================
+
+void main() {
+    // 1. Arithmetic Folding: 
+    // The compiler will pre-calculate this entirely.
+    // Notice in the IR this simply becomes: MOV math_result 50
+    int math_result = (10 * 4) + (20 / 2);
+    
+    // 2. Relational Folding & Dead Code:
+    // (5 > 2) is a known constant True (1). 
+    // The compiler folds the condition, and DCE drops the ELSE block.
+    if (5 > 2) {
+        print(math_result);   // This will print 50
+    } else {
+        print(999);           // This branch is completely removed from IR
+    }
+}
