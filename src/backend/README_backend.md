@@ -6,6 +6,11 @@
 
 ---
 
+# python src/main.py tests/complex_test.tri --arch x86    # x86 only
+# python src/main.py tests/complex_test.tri --arch riscv  # RISC-V only
+# python src/main.py tests/complex_test.tri --arch both   # both (default)
+
+
 ## Table of Contents
 
 1. [Where We Left Off — Optimized IR](#where-we-left-off--optimized-ir)

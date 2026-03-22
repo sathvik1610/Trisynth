@@ -3,6 +3,10 @@
 
 ---
 
+# python src/main.py tests/complex_test.tri --arch x86    # x86 only
+# python src/main.py tests/complex_test.tri --arch riscv  # RISC-V only
+# python src/main.py tests/complex_test.tri --arch both   # both (default)
+
 ## What Happens After Optimization
 
 The optimizer outputs a **clean, minimal IR** (Three-Address Code).
