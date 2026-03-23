@@ -1,0 +1,26 @@
+// ============================================================
+//  DEMO 6 — Common Subexpression Elimination (CSE)
+//
+//  Demonstrates removing redundant repetitive math operations.
+//  If an expression like (x * y) is computed once, the compiler
+//  will remember the result and reuse it instead of doing the
+//  math a second time.
+// ============================================================
+
+void main() {
+    // We use runtime inputs (or variables) so Constant Folding 
+    // doesn't just evaluate it all immediately.
+    int x = 10;
+    int y = 20;
+    
+    // Computation 1: First time computing (x * y)
+    int first_calc = (x * y) + 5;
+    
+    // Computation 2: (x * y) appears again!
+    // Look at the IR after the CSE pass. The second multiplication 
+    // is completely gone. It replaces it with a MOV from the first.
+    int second_calc = (x * y) + 10;
+    
+    print(first_calc);   // 205
+    print(second_calc);  // 210
+}

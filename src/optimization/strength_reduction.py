@@ -16,6 +16,9 @@ class StrengthReduction:
         optimized = []
         for instr in instructions:
             reduced = self._reduce(instr)
+            # Peephole: remove self-assignments (MOV x x)
+            if reduced.opcode == OpCode.MOV and reduced.arg1 == reduced.result:
+                continue
             optimized.append(reduced)
         return optimized
 
@@ -26,34 +29,46 @@ class StrengthReduction:
             return self._reduce_div(instr)
         elif instr.opcode == OpCode.ADD:
             return self._reduce_add(instr)
+        elif instr.opcode == OpCode.SUB:
+            return self._reduce_sub(instr)
         return instr
 
     def _reduce_mul(self, instr: Instruction) -> Instruction:
         # MUL dest, src1, src2
+        # Case 1: Zero
+        if instr.arg1 == 0 or instr.arg2 == 0:
+            return Instruction(OpCode.MOV, arg1=0, result=instr.result)
+            
+        # Case 2: One (Identity)
+        if instr.arg1 == 1:
+            return Instruction(OpCode.MOV, arg1=instr.arg2, result=instr.result)
+        if instr.arg2 == 1:
+            return Instruction(OpCode.MOV, arg1=instr.arg1, result=instr.result)
+
         # Check if either operand is power of 2
         
-        # Case 1: src2 is constant
+        # Case 3: src2 is constant
         if self._is_power_of_two(instr.arg2):
             power = self._get_power(instr.arg2)
             # MUL x, 8 -> LSHIFT x, 3
             return Instruction(OpCode.LSHIFT, arg1=instr.arg1, arg2=power, result=instr.result)
         
-        # Case 2: src1 is constant (Commutative)
+        # Case 4: src1 is constant (Commutative)
         if self._is_power_of_two(instr.arg1):
             power = self._get_power(instr.arg1)
             # MUL 8, x -> LSHIFT x, 3
             return Instruction(OpCode.LSHIFT, arg1=instr.arg2, arg2=power, result=instr.result)
             
-        # Case 3: Zero
-        if instr.arg1 == 0 or instr.arg2 == 0:
-            return Instruction(OpCode.MOV, arg1=0, result=instr.result)
-            
         return instr
 
     def _reduce_div(self, instr: Instruction) -> Instruction:
         # DIV dest, src1, src2
-        # Only optimizes if optimization divisor (arg2) is constant power of 2
         
+        # Identity: x / 1 -> MOV dest, x
+        if instr.arg2 == 1:
+            return Instruction(OpCode.MOV, arg1=instr.arg1, result=instr.result)
+            
+        # Only optimizes if optimization divisor (arg2) is constant power of 2
         if self._is_power_of_two(instr.arg2):
             power = self._get_power(instr.arg2)
             # DIV x, 8 -> RSHIFT x, 3
@@ -70,6 +85,16 @@ class StrengthReduction:
             return Instruction(OpCode.MOV, arg1=instr.arg1, result=instr.result)
         return instr
 
+    def _reduce_sub(self, instr: Instruction) -> Instruction:
+        # SUB dest, src1, src2
+        # Identity: x - 0 -> MOV dest, x
+        if instr.arg2 == 0:
+            return Instruction(OpCode.MOV, arg1=instr.arg1, result=instr.result)
+        # Identity: x - x -> MOV dest, 0
+        if instr.arg1 == instr.arg2 and isinstance(instr.arg1, str):
+            return Instruction(OpCode.MOV, arg1=0, result=instr.result)
+        return instr
+        
     def _is_power_of_two(self, val: Union[str, int, float, None]) -> bool:
         if not isinstance(val, int) or val <= 0:
             return False
