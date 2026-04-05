@@ -8,7 +8,7 @@ class TokenType(Enum):
     INTEGER = auto()        # 123
     FLOAT = auto()          # 12.34
     IDENTIFIER = auto()     # variable_name
-    STRING = auto()         # "string literal" (Reserved for future)
+    STRING = auto()         # "string literal"
     CHAR = auto()           # 'c'
 
     # --- Keywords (Types) ---
@@ -19,6 +19,7 @@ class TokenType(Enum):
     KW_CHAR = auto()        # char
     KW_VOID = auto()        # void
     KW_CONST = auto()       # const
+    KW_STRING = auto()      # string
 
     # --- Keywords (Control Flow) ---
     KW_IF = auto()          # if

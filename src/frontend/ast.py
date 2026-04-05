@@ -33,6 +33,18 @@ class Literal(Expr):
     def __repr__(self):
         return f"Literal({self.value}:{self.type_name})"
 
+class StringLiteral(Expr):
+    """
+    Represents a string literal value.
+    Example: "Hello World"
+    """
+    def __init__(self, value: str):
+        self.value = value
+        self.type_name = "string"
+
+    def __repr__(self):
+        return f"StringLiteral(\"{self.value}\")"
+
 class Variable(Expr):
     """
     Represents a variable access.

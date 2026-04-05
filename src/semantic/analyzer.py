@@ -163,7 +163,8 @@ class SemanticAnalyzer:
             self.visit(node.value)
 
     def visit_PrintStmt(self, node: ast.PrintStmt):
-        self.visit(node.expression)
+        expr_type = self.visit(node.expression)
+        node.expression._semantic_type = expr_type
 
     def visit_ExprStmt(self, node: ast.ExprStmt):
         self.visit(node.expression)
@@ -171,6 +172,9 @@ class SemanticAnalyzer:
     # --- Expressions (Return Type String) ---
 
     def visit_Literal(self, node: ast.Literal) -> str:
+        return node.type_name
+
+    def visit_StringLiteral(self, node: ast.StringLiteral) -> str:
         return node.type_name
 
     def visit_Variable(self, node: ast.Variable) -> str:

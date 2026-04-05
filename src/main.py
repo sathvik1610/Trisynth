@@ -18,6 +18,10 @@ def main():
     if args.demo or not args.file:
         run_demo(args.arch)
     else:
+        if not args.file.endswith('.tri'):
+            print(f"Fatal Compiler Error: Unrecognized file extension in '{args.file}'.")
+            print("Trisynth natively requires standard '.tri' source files for parsing.")
+            sys.exit(1)
         compile_file(args.file, args.arch)
 
 def run_demo(arch='both'):
@@ -216,6 +220,15 @@ class IRInterpreter:
             elif op == inst.OpCode.PRINT:
                 val = self.locals.get(instr.arg1, instr.arg1)
                 print(val)
+            elif op == inst.OpCode.PRINT_STR:
+                # The raw string could still have escape codes, Python print handles most nicely,
+                # though realistically ast.StringLiteral holds raw text.
+                val = self.locals.get(instr.arg1, instr.arg1)
+                # Ensure escape characters like \n actually process in string
+                processed_val = str(val).encode('utf-8').decode('unicode_escape')
+                print(processed_val, end='')
+            elif op == inst.OpCode.LOAD_STR:
+                self.locals[instr.result] = instr.arg1
             elif op == inst.OpCode.ADD:
                 left = self.locals.get(instr.arg1, instr.arg1)
                 right = self.locals.get(instr.arg2, instr.arg2)
@@ -294,48 +307,17 @@ class IRInterpreter:
             self.pc += 1
 
 def process_source(source_code, arch='both'):
-    print("\n==================================")
-    print("           PROGRAM OUTPUT           ")
-    print("==================================\n")
-    
-    # Generate AST and IR instantly to execute first
-    from src.ir.ir_gen import IRGenerator
-    from src.semantic.analyzer import SemanticAnalyzer
-    lexer = Lexer(source_code)
-    tokens = lexer.tokenize()
-    parser = Parser(tokens)
-    
-    try:
-        ast = parser.parse()
-        analyzer = SemanticAnalyzer()
-        analyzer.analyze(ast)
-        ir_gen = IRGenerator()
-        ir = ir_gen.generate(ast)
-        
-        # Interpret the IR
-        from src.optimization.optimizer import Optimizer
-        from src.optimization.constant_fold import ConstantFolding
-        from src.optimization.dead_code import DeadCodeElimination
-        from src.optimization.strength_reduction import StrengthReduction
-        
-        from src.optimization.cse import CommonSubexpressionElimination
-        from src.optimization.copy_propagation import CopyPropagation
-
-        optimizer = Optimizer()
-        optimizer.add_pass(StrengthReduction())
-        optimizer.add_pass(CommonSubexpressionElimination())
-        optimizer.add_pass(CopyPropagation())
-        optimizer.add_pass(ConstantFolding())
-        optimizer.add_pass(CommonSubexpressionElimination())
-        optimizer.add_pass(DeadCodeElimination())
-        optimized_ir = optimizer.optimize(ir)
-        
-        interpreter = IRInterpreter(optimized_ir)
-        interpreter.run()
-    except Exception as e:
-        print(f"Execution Error: {e}")
-
-    print("\n==================================")
+    import time
+    start_time = time.time()
+    print(r"""
+  _____     _                  _   _     
+ |_   _| __(_)___ _   _ _ __ | |_| |__  
+   | || '__| / __| | | | '_ \| __| '_ \ 
+   | || |  | \__ \ |_| | | | | |_| | | |
+   |_||_|  |_|___/\__, |_| |_|\__|_| |_|
+                  |___/                 
+""")
+    print("==================================")
     print("         COMPILATION DETAILS        ")
     print("==================================")
     
@@ -422,13 +404,7 @@ def process_source(source_code, arch='both'):
         print(f"  ❌ Failed: {e}")
         return
 
-    print("\n[6] Execution:")
-    try:
-        interpreter = IRInterpreter(current_ir)
-        interpreter.run()
-        print("\n  ✅ Execution Complete")
-    except Exception as e:
-        print(f"  ❌ Failed: {e}")
+    # Interpreter execution moved below backends
 
     print("\n[7] X86-64 Code Generation (NASM):")
     if arch in ('x86', 'both'):
@@ -485,6 +461,31 @@ def process_source(source_code, arch='both'):
             traceback.print_exc()
     else:
         print("  (skipped — use --arch riscv or --arch both)")
+
+    print("\n==================================")
+    print("           PROGRAM OUTPUT           ")
+    print("==================================\n")
+    try:
+        import subprocess
+        import platform
+        
+        # Check if we are on Windows and need to bridge WSL manually
+        is_windows = platform.system() == "Windows"
+        cmd_prefix = ["wsl"] if is_windows else []
+        
+        print("  [Invoking Native Assembler & Linker...]")
+        subprocess.run(cmd_prefix + ["nasm", "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
+        subprocess.run(cmd_prefix + ["gcc", "output.o", "-o", "program", "-no-pie"], check=True)
+        
+        result = subprocess.run(cmd_prefix + ["./program"], text=True, capture_output=True)
+        print(result.stdout, end="")
+        
+        end_time = time.time()
+        elapsed = (end_time - start_time) * 1000
+        print(f"\n  ✅ Native Hardware Execution Complete")
+        print(f"  Trisynth natively assembled & executed over WSL in {elapsed:.2f} ms")
+    except Exception as e:
+        print(f"  ❌ Failed: {e}")
 
 if __name__ == "__main__":
     main()

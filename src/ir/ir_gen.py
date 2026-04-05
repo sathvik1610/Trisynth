@@ -205,7 +205,11 @@ class IRGenerator:
 
     def visit_PrintStmt(self, node: ast.PrintStmt):
         val = self.visit(node.expression)
-        self._emit(OpCode.PRINT, arg1=val)
+        expr_type = getattr(node.expression, '_semantic_type', None)
+        if expr_type == 'string' or isinstance(node.expression, ast.StringLiteral):
+            self._emit(OpCode.PRINT_STR, arg1=val)
+        else:
+            self._emit(OpCode.PRINT, arg1=val)
 
     def visit_ExprStmt(self, node: ast.ExprStmt):
         self.visit(node.expression)
@@ -216,6 +220,11 @@ class IRGenerator:
         if isinstance(node.value, bool):
             return 1 if node.value else 0
         return node.value
+
+    def visit_StringLiteral(self, node: ast.StringLiteral) -> str:
+        temp = self._new_temp()
+        self._emit(OpCode.LOAD_STR, arg1=node.value, result=temp)
+        return temp
 
     def visit_Variable(self, node: ast.Variable) -> str:
         return self._resolve(node.name)

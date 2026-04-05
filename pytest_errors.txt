@@ -1,0 +1,109 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.0.0, pluggy-1.6.0
+rootdir: D:\GitHub\Custom-Native-Compiler
+collected 0 items / 10 errors
+
+=================================== ERRORS ====================================
+________________ ERROR collecting tests/unit/test_01_lexer.py _________________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_01_lexer.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_01_lexer.py:2: in <module>
+    from src.frontend.lexer import Lexer
+E   ModuleNotFoundError: No module named 'src'
+________________ ERROR collecting tests/unit/test_02_parser.py ________________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_02_parser.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_02_parser.py:2: in <module>
+    from src.frontend.lexer import Lexer
+E   ModuleNotFoundError: No module named 'src'
+_______________ ERROR collecting tests/unit/test_03_semantic.py _______________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_03_semantic.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_03_semantic.py:2: in <module>
+    from src.frontend.lexer import Lexer
+E   ModuleNotFoundError: No module named 'src'
+________________ ERROR collecting tests/unit/test_04_ir_gen.py ________________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_04_ir_gen.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_04_ir_gen.py:2: in <module>
+    from src.frontend.lexer import Lexer
+E   ModuleNotFoundError: No module named 'src'
+____________ ERROR collecting tests/unit/test_compiler_pipeline.py ____________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_compiler_pipeline.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_compiler_pipeline.py:2: in <module>
+    from src.frontend.lexer import Lexer
+E   ModuleNotFoundError: No module named 'src'
+________ ERROR collecting tests/unit/test_opt_01_strength_reduction.py ________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_opt_01_strength_reduction.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_opt_01_strength_reduction.py:2: in <module>
+    from src.ir.instructions import Instruction, OpCode
+E   ModuleNotFoundError: No module named 'src'
+_______________ ERROR collecting tests/unit/test_opt_02_cse.py ________________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_opt_02_cse.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_opt_02_cse.py:2: in <module>
+    from src.ir.instructions import Instruction, OpCode
+E   ModuleNotFoundError: No module named 'src'
+_________ ERROR collecting tests/unit/test_opt_03_copy_propagation.py _________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_opt_03_copy_propagation.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_opt_03_copy_propagation.py:2: in <module>
+    from src.ir.instructions import Instruction, OpCode
+E   ModuleNotFoundError: No module named 'src'
+_________ ERROR collecting tests/unit/test_opt_04_constant_folding.py _________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_opt_04_constant_folding.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_opt_04_constant_folding.py:2: in <module>
+    from src.ir.instructions import Instruction, OpCode
+E   ModuleNotFoundError: No module named 'src'
+_______________ ERROR collecting tests/unit/test_opt_05_dce.py ________________
+ImportError while importing test module 'D:\GitHub\Custom-Native-Compiler\tests\unit\test_opt_05_dce.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\pilya\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\unit\test_opt_05_dce.py:2: in <module>
+    from src.ir.instructions import Instruction, OpCode
+E   ModuleNotFoundError: No module named 'src'
+=========================== short test summary info ===========================
+ERROR tests/unit/test_01_lexer.py
+ERROR tests/unit/test_02_parser.py
+ERROR tests/unit/test_03_semantic.py
+ERROR tests/unit/test_04_ir_gen.py
+ERROR tests/unit/test_compiler_pipeline.py
+ERROR tests/unit/test_opt_01_strength_reduction.py
+ERROR tests/unit/test_opt_02_cse.py
+ERROR tests/unit/test_opt_03_copy_propagation.py
+ERROR tests/unit/test_opt_04_constant_folding.py
+ERROR tests/unit/test_opt_05_dce.py
+!!!!!!!!!!!!!!!!!! Interrupted: 10 errors during collection !!!!!!!!!!!!!!!!!!!
+============================= 10 errors in 0.10s ==============================

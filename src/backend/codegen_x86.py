@@ -18,6 +18,13 @@ class X86Generator:
         self.strings = []
 
     def generate(self, instructions: List[Instruction]) -> str:
+        # Pre-pass: Collect all string literals to build the .data section
+        self.strings = []
+        for instr in instructions:
+            if instr.opcode == OpCode.LOAD_STR:
+                if instr.arg1 not in self.strings:
+                    self.strings.append(instr.arg1)
+
         self._emit_header()
 
         current_func_instrs = []
@@ -172,6 +179,21 @@ class X86Generator:
             self._emit("    call printf")
             self._emit("    mov rsp, rbx")   # restore rsp
 
+        elif instr.opcode == OpCode.PRINT_STR:
+            self._load_to_rax(instr.arg1)
+            self._emit("    mov rsi, rax")
+            self._emit("    lea rdi, [rel fmt_str]")
+            self._emit("    xor rax, rax")
+            self._emit("    mov rbx, rsp")   # save rsp
+            self._emit("    and rsp, -16")   # align
+            self._emit("    call printf")
+            self._emit("    mov rsp, rbx")   # restore rsp
+
+        elif instr.opcode == OpCode.LOAD_STR:
+            idx = self.strings.index(instr.arg1)
+            self._emit(f"    lea rax, [rel str_{idx}]")
+            self._store_rax(instr.result)
+
         elif instr.opcode == OpCode.RETURN:
             if instr.arg1 is not None:
                 self._load_to_rax(instr.arg1)
@@ -304,6 +326,9 @@ class X86Generator:
     def _emit_header(self):
         self.output.append("section .data")
         self.output.append('    fmt_int db "%ld", 10, 0')
+        self.output.append('    fmt_str db "%s", 0')
+        for i, s in enumerate(self.strings):
+            self.output.append(f"    str_{i} db `{s}`, 0")
         self.output.append("")
         self.output.append("section .text")
         self.output.append("    extern printf")

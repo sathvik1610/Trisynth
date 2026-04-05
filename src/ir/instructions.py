@@ -46,6 +46,8 @@ class OpCode(Enum):
 
     # I/O
     PRINT = auto()       # PRINT src
+    PRINT_STR = auto()   # PRINT_STR src
+    LOAD_STR = auto()    # LOAD_STR dest, str_literal
 
 @dataclass
 class Instruction:

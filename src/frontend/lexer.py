@@ -111,6 +111,7 @@ class Lexer:
             "true": TokenType.KW_TRUE,
             "false": TokenType.KW_FALSE,
             "const": TokenType.KW_CONST,
+            "string": TokenType.KW_STRING,
         }
 
         # List of (Regex Pattern, TokenType OR None for complex handling)
@@ -163,6 +164,9 @@ class Lexer:
             (r';', TokenType.SEMICOLON),
             (r',', TokenType.COMMA),
 
+            # String Literal
+            (r'"[^"\\]*(\\.[^"\\]*)*"', TokenType.STRING),
+
             # Character Literal
             (r"'[^']'", TokenType.CHAR),
         ]
@@ -194,6 +198,10 @@ class Lexer:
                         elif token_type == TokenType.CHAR:
                              # Strip quotes for value? Or keep them? Usually keep raw value in token.
                              self.tokens.append(Token(token_type, text, start_line, start_col))
+                        elif token_type == TokenType.STRING:
+                             # Strip external quotes
+                             value = text[1:-1]
+                             self.tokens.append(Token(token_type, value, start_line, start_col))
                         else:
                             self.tokens.append(Token(token_type, text, start_line, start_col))
                     

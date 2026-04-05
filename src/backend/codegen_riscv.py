@@ -23,8 +23,15 @@ class RISCVGenerator:
         self._pending_params = []
         self._current_func_name = None
         self._frame_locals_size = 0
+        self.strings = []
 
     def generate(self, instructions: List[Instruction]) -> str:
+        self.strings = []
+        for instr in instructions:
+            if instr.opcode == OpCode.LOAD_STR:
+                if instr.arg1 not in self.strings:
+                    self.strings.append(instr.arg1)
+
         self._emit_header()
 
         current_func_instrs = []
@@ -215,6 +222,17 @@ class RISCVGenerator:
             self._emit("    la   a0, fmt_int")
             self._emit("    call printf")
 
+        elif instr.opcode == OpCode.PRINT_STR:
+            self._load_to_t0(instr.arg1)
+            self._emit("    mv   a1, t0")
+            self._emit("    la   a0, fmt_str")
+            self._emit("    call printf")
+
+        elif instr.opcode == OpCode.LOAD_STR:
+            idx = self.strings.index(instr.arg1)
+            self._emit(f"    la   t0, str_{idx}")
+            self._store_t0(instr.result)
+
         elif instr.opcode == OpCode.RETURN:
             if instr.arg1 is not None:
                 self._load_to_t0(instr.arg1)
@@ -342,6 +360,9 @@ class RISCVGenerator:
     def _emit_header(self):
         self.output.append(".section .data")
         self.output.append('fmt_int: .string "%ld\\n"')
+        self.output.append('fmt_str: .string "%s"')
+        for i, s in enumerate(self.strings):
+            self.output.append(f'str_{i}: .string "{s}"')
         self.output.append("")
         self.output.append(".section .text")
         self.output.append("")

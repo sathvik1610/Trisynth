@@ -99,7 +99,7 @@ class Parser:
         # Parse Type
         type_token = self._current()
         if type_token.type not in (TokenType.KW_INT, TokenType.KW_UINT32, TokenType.KW_FLOAT, 
-                                   TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID):
+                                   TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID, TokenType.KW_STRING):
              raise Exception(f"Expected type declaration at {type_token.line}:{type_token.column}")
         
         type_str = type_token.value
@@ -157,7 +157,7 @@ class Parser:
                 # Param type
                 pt_token = self._current()
                 if pt_token.type not in (TokenType.KW_INT, TokenType.KW_UINT32, TokenType.KW_FLOAT, 
-                                   TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID):
+                                   TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID, TokenType.KW_STRING):
                      raise Exception(f"Expected parameter type at {pt_token.line}:{pt_token.column}")
                 pt_str = pt_token.value
                 self._advance()
@@ -217,7 +217,7 @@ class Parser:
         current_type = self._current().type
         if current_type in (TokenType.KW_INT, TokenType.KW_UINT32, TokenType.KW_FLOAT, 
                             TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID,
-                            TokenType.KW_CONST):
+                            TokenType.KW_CONST, TokenType.KW_STRING):
              return self.parse_declaration() # It's a local var decl
 
         return self.parse_expression_statement()
@@ -232,7 +232,7 @@ class Parser:
             # Try declaration first
             current_type = self._current().type
             if current_type in (TokenType.KW_INT, TokenType.KW_UINT32, TokenType.KW_FLOAT,
-                                TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID):
+                                TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID, TokenType.KW_STRING):
                  init = self.parse_declaration() # Consumes semicolon
             else:
                  init = self.parse_expression_statement() # Consumes semicolon
@@ -450,6 +450,8 @@ class Parser:
             return ast.Literal(int(self.tokens[self.pos-1].value), "int")
         if self._match(TokenType.FLOAT):
             return ast.Literal(float(self.tokens[self.pos-1].value), "float")
+        if self._match(TokenType.STRING):
+            return ast.StringLiteral(self.tokens[self.pos-1].value)
         if self._match(TokenType.KW_TRUE):
             return ast.Literal(True, "bool")
         if self._match(TokenType.KW_FALSE):
