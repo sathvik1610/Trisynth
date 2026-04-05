@@ -11,8 +11,8 @@ global main
 main:
     push rbp
     mov rbp, rsp
-    ; PRINT 205
-    mov rax, 205
+    ; PRINT 12
+    mov rax, 12
     mov rsi, rax
     lea rdi, [rel fmt_int]
     xor rax, rax
@@ -20,8 +20,35 @@ main:
     and rsp, -16
     call printf
     mov rsp, rbx
-    ; PRINT 210
-    mov rax, 210
+    ; PRINT 24
+    mov rax, 24
+    mov rsi, rax
+    lea rdi, [rel fmt_int]
+    xor rax, rax
+    mov rbx, rsp
+    and rsp, -16
+    call printf
+    mov rsp, rbx
+    ; PRINT 48
+    mov rax, 48
+    mov rsi, rax
+    lea rdi, [rel fmt_int]
+    xor rax, rax
+    mov rbx, rsp
+    and rsp, -16
+    call printf
+    mov rsp, rbx
+    ; PRINT 3
+    mov rax, 3
+    mov rsi, rax
+    lea rdi, [rel fmt_int]
+    xor rax, rax
+    mov rbx, rsp
+    and rsp, -16
+    call printf
+    mov rsp, rbx
+    ; PRINT 1
+    mov rax, 1
     mov rsi, rax
     lea rdi, [rel fmt_int]
     xor rax, rax

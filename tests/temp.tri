@@ -1,6 +1,0 @@
-void main() {
-    print("Hello from Trisynth String Implementation!\n");
-    print(1+1);
-    string hihi = "Hi man";
-    print(hihi);
-}

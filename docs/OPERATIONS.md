@@ -442,7 +442,7 @@ void main() {
 |---|---|
 | Floating point arithmetic | ❌ Lexed but not fully executed |
 | Pointers (`*`, `&`) | ❌ Not supported |
-| Strings | ❌ Not supported |
+| Strings | ✅ Fully mapped mapping natively evaluating C-style static boundaries loading dynamically! |
 | `switch` / `case` | ❌ Use `if/else if` chain |
 | Ternary `? :` | ❌ Use `if/else` |
 | `while(true)` infinite loop without `break` | ⚠️ Compiles, runs forever |
@@ -452,3 +452,26 @@ void main() {
 | Implicit int↔bool conversion | ❌ Type Error at compile time |
 | Dynamic array size `int arr[n]` | ❌ Size must be integer literal |
 | Array out-of-bounds check | ❌ Undefined behavior at runtime |
+
+---
+
+## 18. Native Strings & Character Pointers (Advanced)
+
+Trisynth strictly mimics exact C-layer behaviors natively extracting literal allocations dynamically without external string classes implicitly!
+
+```c
+void main() {
+    // String Initialization
+    string msg = "Compiler Running\n";
+    print(msg);
+    
+    // String arrays allocating pointers sequentially!
+    string words[3];
+    words[0] = "Apple\n";
+    words[1] = "Banana\n";
+    print(words[1]);   // prints 'Banana'
+}
+```
+
+- When allocating `words[0] = "Apple"`, Trisynth dynamically registers an embedded `.data` segment literal `str_X`.
+- It then physically extracts the raw 64-bit AMD64/RISC-V pointer mapping cleanly into the `words` stack offset natively mirroring standard C `char*` interactions flawlessly!

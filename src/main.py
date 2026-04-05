@@ -7,39 +7,48 @@ from src.frontend.lexer import Lexer
 from src.frontend.parser import Parser
 
 def main():
-    parser = argparse.ArgumentParser(description="Trisynth Compiler")
-    parser.add_argument('file', nargs='?', help="Source file to compile")
+    parser = argparse.ArgumentParser(description="Trisynth Native Compiler")
+    parser.add_argument('file', nargs='?', help="Source file to compile (.tri)")
     parser.add_argument('--demo', action='store_true', help="Run in interactive demo mode")
-    parser.add_argument('--arch', choices=['x86', 'riscv', 'both'], default='both',
-                        help="Target architecture for code generation (default: both)")
+    parser.add_argument('--arch', choices=['x86', 'riscv', 'both'], default='x86',
+                        help="Target architecture (default: x86)")
+    # Verbosity
+    parser.add_argument('--tokens', action='store_true', help='Print Lexer tokens and halt')
+    parser.add_argument('--ast', action='store_true', help='Print Abstract Syntax Tree and halt')
+    parser.add_argument('--ir', action='store_true', help='Print Intermediate Representation and halt')
+    parser.add_argument('--asm', action='store_true', help='Print generated Assembly strings and halt')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Print all compilation details')
+    # Analysis
+    parser.add_argument('--compare-asm', action='store_true', help='Compile to both x86 and RISC-V and print side-by-side')
+    parser.add_argument('--benchmark', action='store_true', help='Compile, natively execute, and compare speeds of x86 vs RISC-V')
     
     args = parser.parse_args()
 
     if args.demo or not args.file:
-        run_demo(args.arch)
+        run_demo(args)
     else:
         if not args.file.endswith('.tri'):
             print(f"Fatal Compiler Error: Unrecognized file extension in '{args.file}'.")
             print("Trisynth natively requires standard '.tri' source files for parsing.")
             sys.exit(1)
-        compile_file(args.file, args.arch)
+        compile_file(args.file, args)
 
-def run_demo(arch='both'):
+def run_demo(args):
     print("Trisynth Compiler Interactive Mode")
     print("----------------------------------")
     print("Type your code below (press Ctrl+D on Linux/Mac or Ctrl+Z then Enter on Windows to finish):")
     try:
         source_code = sys.stdin.read()
         if source_code.strip():
-            process_source(source_code, arch)
+            process_source(source_code, args)
     except (KeyboardInterrupt, EOFError):
         return
 
-def compile_file(filepath, arch='both'):
+def compile_file(filepath, args):
     try:
         with open(filepath, 'r') as f:
             source_code = f.read()
-        process_source(source_code, arch)
+        process_source(source_code, args)
     except FileNotFoundError:
         print(f"Error: File '{filepath}' not found.")
     except Exception as e:
@@ -306,10 +315,13 @@ class IRInterpreter:
                 
             self.pc += 1
 
-def process_source(source_code, arch='both'):
+def process_source(source_code, args):
     import time
     start_time = time.time()
-    print(r"""
+    
+    verbose = args.verbose
+    if verbose or args.tokens or args.ast or args.ir or args.asm or args.compare_asm:
+        print(r"""
   _____     _                  _   _     
  |_   _| __(_)___ _   _ _ __ | |_| |__  
    | || '__| / __| | | | '_ \| __| '_ \ 
@@ -317,58 +329,60 @@ def process_source(source_code, arch='both'):
    |_||_|  |_|___/\__, |_| |_|\__|_| |_|
                   |___/                 
 """)
-    print("==================================")
-    print("         COMPILATION DETAILS        ")
-    print("==================================")
+    if verbose:
+        print("==================================")
+        print("         COMPILATION DETAILS        ")
+        print("==================================")
     
-    print("\n[1] Tokens:")
     lexer = Lexer(source_code)
     tokens = lexer.tokenize()
     
-    # Print Tokens in columns: [Line:Col] TYPE     "value"
-    print("  Line:Col | Type             | Value")
-    print("  ---------+------------------+-----------------")
-    for t in tokens:
-        print(f"  {t.line:02d}:{t.column:02d}    | {t.type.name:<16} | '{t.value}'")
+    if verbose or args.tokens:
+        print("\n[1] Tokens:")
+        print("  Line:Col | Type             | Value")
+        print("  ---------+------------------+-----------------")
+        for t in tokens:
+            print(f"  {t.line:02d}:{t.column:02d}    | {t.type.name:<16} | '{t.value}'")
+        if args.tokens: return
 
-    print("\n[2] Abstract Syntax Tree (AST):")
     parser = Parser(tokens)
     ast = parser.parse()
-    ast_printer = ASTPrinter()
-    print(ast_printer.format(ast))
+    
+    if verbose or args.ast:
+        print("\n[2] Abstract Syntax Tree (AST):")
+        ast_printer = ASTPrinter()
+        print(ast_printer.format(ast))
+        if args.ast: return
 
-    print("\n[3] Semantic Analysis:")
     from src.semantic.analyzer import SemanticAnalyzer
     try:
         analyzer = SemanticAnalyzer()
         analyzer.analyze(ast)
-        print("  ✅ Passed (No semantic errors)")
-        
-        # Extract symbols from the global scope (and potentially functions if we tracked them)
-        # For a clean output, we can print the global scope functions at least
-        print("\n  --- Global Symbol Table ---")
-        print("  Name             | Type             | Category   ")
-        print("  -----------------+------------------+------------")
-        global_scope = analyzer.symbol_table.scopes[0]
-        for name, sym in global_scope.items():
-             print(f"  {name:<16} | {sym.type_name:<16} | {sym.category}")
-            
-    except Exception as e:
-        print(f"  ❌ Failed: {e}")
-        return # Stop if semantic error
-
-    print("\n[4] Intermediate Representation (IR):")
-    from src.ir.ir_gen import IRGenerator
-    try:
-        ir_gen = IRGenerator()
-        ir = ir_gen.generate(ast)
-        for instr in ir:
-            print(f"  {instr}")
+        if verbose:
+            print("\n[3] Semantic Analysis:")
+            print("  ✅ Passed (No semantic errors)")
+            print("\n  --- Global Symbol Table ---")
+            print("  Name             | Type             | Category   ")
+            print("  -----------------+------------------+------------")
+            global_scope = analyzer.symbol_table.scopes[0]
+            for name, sym in global_scope.items():
+                 print(f"  {name:<16} | {sym.type_name:<16} | {sym.category}")
     except Exception as e:
         print(f"  ❌ Failed: {e}")
         return
 
-    print("\n[5] Optimization:")
+    from src.ir.ir_gen import IRGenerator
+    try:
+        ir_gen = IRGenerator()
+        ir = ir_gen.generate(ast)
+        if verbose or args.ir:
+            print("\n[4] Intermediate Representation (IR):")
+            for instr in ir:
+                print(f"  {instr}")
+    except Exception as e:
+        print(f"  ❌ Failed: {e}")
+        return
+
     from src.optimization.optimizer import Optimizer
     from src.optimization.constant_fold import ConstantFolding
     from src.optimization.dead_code import DeadCodeElimination
@@ -376,114 +390,121 @@ def process_source(source_code, arch='both'):
     from src.optimization.cse import CommonSubexpressionElimination
     from src.optimization.copy_propagation import CopyPropagation
     try:
-        # Instead of generic optimizer, let's run passes manually to show steps
-        print("  --- Initial IR ---")
-        for instr in ir:
-             print(f"    {instr}")
-             
         passes = [
             ("Strength Reduction", StrengthReduction()),
             ("Common Subexp Elimination", CommonSubexpressionElimination()),
             ("Copy Propagation", CopyPropagation()),
             ("Constant Folding", ConstantFolding()),
-            ("Post-Folding Cleanup", CommonSubexpressionElimination()), # Cleans identical folded constants
+            ("Post-Folding Cleanup", CommonSubexpressionElimination()),
             ("Dead Code Elimination", DeadCodeElimination())
         ]
         
         current_ir = ir
+        if verbose or args.ir:
+            print("\n[5] Optimization:")
+            print("  --- Initial IR ---")
+            for instr in ir:
+                 print(f"    {instr}")
+                 
         for name, opt_pass in passes:
-            print(f"\n  --- After {name} ---")
             current_ir = opt_pass.run(current_ir)
-            if not current_ir:
-                print("    (Empty IR)")
-            else:
-                for instr in current_ir:
-                    print(f"    {instr}")
-        print("\n  ✅ Optimization Complete")
+            if verbose or args.ir:
+                print(f"\n  --- After {name} ---")
+                if not current_ir:
+                    print("    (Empty IR)")
+                else:
+                    for instr in current_ir:
+                        print(f"    {instr}")
+        if verbose or args.ir:
+            print("\n  ✅ Optimization Complete")
+            if args.ir: return
     except Exception as e:
         print(f"  ❌ Failed: {e}")
         return
 
     # Interpreter execution moved below backends
 
-    print("\n[7] X86-64 Code Generation (NASM):")
-    if arch in ('x86', 'both'):
-        try:
-            from src.backend.codegen_x86 import X86Generator
-            x86_gen = X86Generator()
-            asm_code = x86_gen.generate(current_ir)
+    # Write AST to output.asm and output_riscv.s regardless, to maintain the state
+    from src.backend.codegen_x86 import X86Generator
+    from src.backend.codegen_riscv import RISCVGenerator
+    
+    x86_gen = X86Generator()
+    asm_code = x86_gen.generate(current_ir)
+    with open("output.asm", "w") as f:
+        f.write(asm_code)
+        
+    riscv_gen = RISCVGenerator()
+    riscv_code = riscv_gen.generate(current_ir)
+    with open("output_riscv.s", "w") as f:
+        f.write(riscv_code)
 
-            print()
+    if verbose or args.asm or args.compare_asm:
+        if args.compare_asm or args.arch in ('x86', 'both'):
+            print("\n[7] X86-64 Code Generation (NASM):")
             for line in asm_code.splitlines():
                 print(f"  {line}")
-
-            output_path = "output.asm"
-            with open(output_path, "w") as f:
-                f.write(asm_code)
-
-            print(f"\n  ✅ Assembly written to '{output_path}'")
-            print(f"  Assemble & link (Linux/WSL):")
-            print(f"    nasm -f elf64 {output_path} -o output.o")
-            print(f"    gcc output.o -o program -no-pie")
-            print(f"    ./program")
-        except Exception as e:
-            import traceback
-            print(f"  ❌ Failed: {e}")
-            traceback.print_exc()
-    else:
-        print("  (skipped — use --arch x86 or --arch both)")
-
-    print("\n[8] RISC-V 64-bit Code Generation (GNU AS):")
-    if arch in ('riscv', 'both'):
-        try:
-            from src.backend.codegen_riscv import RISCVGenerator
-            riscv_gen = RISCVGenerator()
-            riscv_code = riscv_gen.generate(current_ir)
-
-            print()
+        if args.compare_asm or args.arch in ('riscv', 'both'):
+            print("\n[8] RISC-V 64-bit Code Generation (GNU AS):")
             for line in riscv_code.splitlines():
                 print(f"  {line}")
+        if args.asm or args.compare_asm: return
 
-            riscv_path = "output_riscv.s"
-            with open(riscv_path, "w") as f:
-                f.write(riscv_code)
-
-            print(f"\n  ✅ Assembly written to '{riscv_path}'")
-            print(f"  Cross-compile & run (requires riscv64 toolchain):")
-            print(f"    riscv64-linux-gnu-gcc {riscv_path} -o program_riscv -static")
-            print(f"    qemu-riscv64 ./program_riscv")
-            print(f"  Or on a native RISC-V board/VM:")
-            print(f"    gcc {riscv_path} -o program_riscv")
-            print(f"    ./program_riscv")
-        except Exception as e:
-            import traceback
-            print(f"  ❌ Failed: {e}")
-            traceback.print_exc()
-    else:
-        print("  (skipped — use --arch riscv or --arch both)")
-
-    print("\n==================================")
-    print("           PROGRAM OUTPUT           ")
-    print("==================================\n")
+    # NATIVE HARDWARE EXECUTION
+    if verbose:
+        print("\n==================================")
+        print("           PROGRAM OUTPUT           ")
+        print("==================================\n")
+        
     try:
         import subprocess
         import platform
         
-        # Check if we are on Windows and need to bridge WSL manually
         is_windows = platform.system() == "Windows"
         cmd_prefix = ["wsl"] if is_windows else []
         
-        print("  [Invoking Native Assembler & Linker...]")
-        subprocess.run(cmd_prefix + ["nasm", "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
-        subprocess.run(cmd_prefix + ["gcc", "output.o", "-o", "program", "-no-pie"], check=True)
+        if args.benchmark:
+            print(f"  [Benchmarking Mode -> Building X86-64 Native & RISC-V QEMU]")
+            # X86 
+            x86_start = time.time()
+            subprocess.run(cmd_prefix + ["nasm", "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
+            subprocess.run(cmd_prefix + ["gcc", "output.o", "-o", "program", "-no-pie"], check=True)
+            res_x86 = subprocess.run(cmd_prefix + ["./program"], text=True, capture_output=True)
+            x86_elapsed = (time.time() - x86_start) * 1000
+            
+            # RISC-V
+            rv_start = time.time()
+            subprocess.run(cmd_prefix + ["riscv64-linux-gnu-gcc", "output_riscv.s", "-o", "program_riscv", "-static"], check=True)
+            res_rv = subprocess.run(cmd_prefix + ["qemu-riscv64", "./program_riscv"], text=True, capture_output=True)
+            rv_elapsed = (time.time() - rv_start) * 1000
+            
+            print(f"\n[X86-64 NATIVE EXECUTION]\n{res_x86.stdout}")
+            print(f"[RISC-V QEMU EXECUTION]\n{res_rv.stdout}")
+            print(f"\n  ✅ Benchmarking Complete")
+            print(f"  ⚡ Intel x86-64 WSL Natively: {x86_elapsed:.2f} ms")
+            print(f"  🔍 RISC-V QEMU Emulation    : {rv_elapsed:.2f} ms")
         
-        result = subprocess.run(cmd_prefix + ["./program"], text=True, capture_output=True)
-        print(result.stdout, end="")
-        
-        end_time = time.time()
-        elapsed = (end_time - start_time) * 1000
-        print(f"\n  ✅ Native Hardware Execution Complete")
-        print(f"  Trisynth natively assembled & executed over WSL in {elapsed:.2f} ms")
+        else:
+            if verbose: print("  [Invoking Native Assembler & Linker...]")
+            
+            wsl_tag = " over WSL" if is_windows else ""
+            
+            if args.arch in ('x86', 'both'):
+                subprocess.run(cmd_prefix + ["nasm", "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
+                subprocess.run(cmd_prefix + ["gcc", "output.o", "-o", "program", "-no-pie"], check=True)
+                result = subprocess.run(cmd_prefix + ["./program"], text=True, capture_output=True)
+                print(result.stdout, end="")
+            elif args.arch == 'riscv':
+                subprocess.run(cmd_prefix + ["riscv64-linux-gnu-gcc", "output_riscv.s", "-o", "program_riscv", "-static"], check=True)
+                result = subprocess.run(cmd_prefix + ["qemu-riscv64", "./program_riscv"], text=True, capture_output=True)
+                print(result.stdout, end="")
+                wsl_tag = " over QEMU-RISCV64"
+
+            end_time = time.time()
+            elapsed = (end_time - start_time) * 1000
+            if verbose:
+                print(f"\n  ✅ Native Hardware Execution Complete")
+                print(f"  ⚡ Trisynth natively assembled & executed{wsl_tag} in {elapsed:.2f} ms")
+                
     except Exception as e:
         print(f"  ❌ Failed: {e}")
 

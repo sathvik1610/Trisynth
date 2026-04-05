@@ -11,13 +11,28 @@ main:
     sd   ra, 24(sp)
     sd   s0, 16(sp)
     addi s0, sp, 16
-    # PRINT 205
-    li   t0, 205
+    # PRINT 12
+    li   t0, 12
     mv   a1, t0
     la   a0, fmt_int
     call printf
-    # PRINT 210
-    li   t0, 210
+    # PRINT 24
+    li   t0, 24
+    mv   a1, t0
+    la   a0, fmt_int
+    call printf
+    # PRINT 48
+    li   t0, 48
+    mv   a1, t0
+    la   a0, fmt_int
+    call printf
+    # PRINT 3
+    li   t0, 3
+    mv   a1, t0
+    la   a0, fmt_int
+    call printf
+    # PRINT 1
+    li   t0, 1
     mv   a1, t0
     la   a0, fmt_int
     call printf

@@ -62,41 +62,57 @@ It compiles NanoC source through every classical stage — Lexing → Parsing �
 
 ## 2. Quick Start
 
-### Prerequisites
+### Installation & Wrappers
+For professional ease-of-use, this project includes dynamic CLI execution wrappers allowing you to launch the compiler cleanly from anywhere on your system via the `tsyn` alias! 
+
+- Linux / Mac: `./tsyn code.tri`
+- Windows CMD: `.\tsyn code.tri`
+- Windows PowerShell: `.\tsyn code.tri`
+
+*(To make `tsyn` globally recognized on Windows, simply add this repository's folder to your `Path` Environment Variables!)*
+
+### Standard Compilation
 ```bash
-pip install -r requirements.txt   # pytest only
-python --version                  # Requires Python 3.10+
+tsyn src/my_program.tri
 ```
 
-### Compile & Run a .tri File
-```bash
-python -m src.main src/my_program.tri
-```
-
-This prints sequentially executing top-down bounds guaranteeing seamless reviews natively generating:
-1. **TRISYNTH ASCII Logo** (Initializing compilation layout)
-2. **Tokens** table  
-3. **AST** pretty-print  
-4. **Semantic Analysis** result + symbol table  
-5. **IR** instruction listing  
-6. **Optimized IR** (after all 6 passes natively)  
-7. **Native Assembly** (x86-64 NASM or RISC-V GNU AS)
-8. **Native Program Output** (Compiled locally using child subprocesses invoking `wsl` on the raw Assembly) alongside a dynamically evaluated millisecond metric proving lightning-fast compilation speeds explicitly operating upon pure hardware!
+By default, the compiler is completely silent (following industry standards). It parses your file, natively executes all optimization passes dynamically, invokes native Assembler/Linker subprocesses (via `wsl` if on Windows, or natively if on Linux), and exclusively prints out the program's final `stdout` alongside a millisecond execution timer perfectly demonstrating the hardware speed!
 
 > [!CAUTION]
-> The CLI entrypoint explicitly validates extensions requiring `.tri` architectures natively blocking ambiguous strings imitating professional boundaries flawlessly catching incorrect formats!
+> The CLI entrypoint explicitly validates extensions requiring `.tri` files natively blocking ambiguous strings imitating professional boundaries catching incorrect formats!
+
+### Professional Debugging Flags
+If you wish to debug specific translation layers or visually trace the parsing engines, you can format the execution natively using the following explicit CLI flags:
+- `--verbose` or `-v`: Dumps literally everything (Tokens, AST, Semantic Table, IR, Optimizations, Assemblies) seamlessly into your console simultaneously.
+- `--tokens`: Parses your script and halts, printing exactly the lexical tokenization maps.
+- `--ast`: Halts execution early and pretty-prints the hierarchical Abstract Syntax Tree structure.
+- `--ir`: Halts after intermediate processing and dumps the Three Address Code mappings along with all 6 optimization phase traces.
+- `--asm`: Dumps the raw generated NASM / GNU AS Assembly text strings physically into your console safely avoiding execution.
+
+### Architecture Targeting & Benchmarking
+The compiler can target dual independent CPU architectures natively bypassing intermediate abstractions natively:
+- `--arch x86` (Default): Evaluates output natively formatting AMD64 instruction subsets securely.
+- `--arch riscv`: Emits highly specialized RISC-V 64-bit GNU AS formatting dynamically.
+- `--arch both`: Outputs both codebases dynamically into local hard drive variables concurrently.
+- `--compare-asm`: Compiles architectures simultaneously, returning visual Assembly traces side-by-side natively!
+- `--benchmark`: Automatically spawns emulated environments building both AMD64 and generic QEMU RISC-V binaries, printing their execution evaluations globally demonstrating physical latency natively!
+
+### Creating a Standalone Compiler Executable
+To permanently lock this project into an agnostic software tool capable of running on computers without Python installed:
+1. Run `pip install pyinstaller` in your terminal.
+2. Execute `pyinstaller --onefile --name trisynth src/main.py`
+3. Enter the newly built `dist/` directory exporting your fully enclosed `trisynth.exe` file professionally, letting you distribute a true compiler to peers cleanly.
 
 ### Interactive REPL
 ```bash
-python -m src.main
+tsyn --demo
 # > Type NanoC code, press Enter twice to compile
 ```
 
 ### Run the Test Suite
 ```bash
-python -m pytest                  # All 98 tests
+python -m pytest                  # 47 Deeply formatted tests natively mapping logic boundaries
 python -m pytest -v               # Verbose — shows each test name
-python -m pytest tests/unit/test_bug_hunter.py -v   # Bug-hunter only
 ```
 
 ### Sample Program

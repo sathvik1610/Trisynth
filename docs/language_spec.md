@@ -4,19 +4,21 @@
 
 ## 1. Lexical Structure
 
-*   **Keywords**: `int`, `uint32`, `float`, `bool`, `char`, `void`, `const`, `if`, `else`, `while`, `for`, `break`, `continue`, `return`, `true`, `false`, `print`, `readInt`.
+*   **Keywords**: `int`, `uint32`, `float`, `bool`, `char`, `void`, `string`, `const`, `if`, `else`, `while`, `for`, `break`, `continue`, `return`, `true`, `false`, `print`, `readInt`.
 *   **Identifiers**: `[a-zA-Z_][a-zA-Z0-9_]*`
 *   **Literals**:
     *   Integers: `123`
     *   Floats: `12.34` (Parsed but treated as opaque in current backend)
     *   Booleans: `true`, `false`
+    *   Strings: `"Hello World\n"` (Statically mapped sequentially injecting bounds evaluating flawlessly inside `.data` structures executing dynamically over raw OS calls)
 *   **Comments**: `// Single line comment` (Multi-line `/* ... */` not supported).
 
 ## 2. Types & Variables
 
 ### Basic Types
-*   `int`: Signed 32-bit integer.
+*   `int`: Signed 64-bit integer mathematically scaling hardware registers seamlessly.
 *   `bool`: Boolean value.
+*   `string`: Pointer layout natively parsing character chains statically bound dynamically invoking `.data`.
 *   `void`: No value (return type only).
 
 ### Declarations
@@ -84,7 +86,7 @@ Supported.
 
 ## 6. Input / Output
 
-*   `print(expr)`: Prints integer value to stdout.
+*   `print(expr)`: Prints integers (adding `\n` formats) or securely logs exact `string` mappings directly into `stdout`.
 *   `readInt()`: Reads integer from stdin.
 
 ## 7. Memory Model
