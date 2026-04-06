@@ -462,11 +462,19 @@ def process_source(source_code, args):
         is_windows = platform.system() == "Windows"
         cmd_prefix = ["wsl"] if is_windows else []
         
+        # Resolve bundled NASM for Linux
+        if hasattr(sys, '_MEIPASS'):
+            bundled_nasm = os.path.join(sys._MEIPASS, 'bin', 'linux', 'nasm')
+        else:
+            bundled_nasm = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bin', 'linux', 'nasm'))
+            
+        nasm_exe = bundled_nasm if (not is_windows and os.path.exists(bundled_nasm)) else "nasm"
+        
         if args.benchmark:
             print(f"  [Benchmarking Mode -> Building X86-64 Native & RISC-V QEMU]")
             # X86 
             x86_start = time.time()
-            subprocess.run(cmd_prefix + ["nasm", "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
+            subprocess.run(cmd_prefix + [nasm_exe, "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
             subprocess.run(cmd_prefix + ["gcc", "output.o", "-o", "program", "-no-pie"], check=True)
             res_x86 = subprocess.run(cmd_prefix + ["./program"], text=True, capture_output=True)
             x86_elapsed = (time.time() - x86_start) * 1000
@@ -489,7 +497,7 @@ def process_source(source_code, args):
             wsl_tag = " over WSL" if is_windows else ""
             
             if args.arch in ('x86', 'both'):
-                subprocess.run(cmd_prefix + ["nasm", "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
+                subprocess.run(cmd_prefix + [nasm_exe, "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
                 subprocess.run(cmd_prefix + ["gcc", "output.o", "-o", "program", "-no-pie"], check=True)
                 result = subprocess.run(cmd_prefix + ["./program"], text=True, capture_output=True)
                 print(result.stdout, end="")

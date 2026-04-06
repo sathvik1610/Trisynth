@@ -5,7 +5,7 @@ a = Analysis(
     ['src/main.py'],
     pathex=['.'],
     binaries=[],
-    datas=[],
+    datas=[('bin/linux/nasm', 'bin/linux')],
     hiddenimports=['src.frontend.lexer', 'src.frontend.parser', 'src.semantic.analyzer', 'src.ir.ir_gen', 'src.optimization.optimizer', 'src.optimization.constant_fold', 'src.optimization.dead_code', 'src.optimization.strength_reduction', 'src.optimization.cse', 'src.optimization.copy_propagation', 'src.backend.codegen_x86', 'src.backend.codegen_riscv'],
     hookspath=[],
     hooksconfig={},

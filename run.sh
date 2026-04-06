@@ -15,7 +15,11 @@ python3 src/main.py "$FILE" --arch "$ARCH"
 if [ "$ARCH" = "x86" ] || [ "$ARCH" = "both" ]; then
     echo ""
     echo "=== Running x86-64 ==="
-    nasm -f elf64 output.asm -o output.o
+    if [ -f "bin/linux/nasm" ]; then
+        bin/linux/nasm -f elf64 output.asm -o output.o
+    else
+        nasm -f elf64 output.asm -o output.o
+    fi
     gcc output.o -o program -no-pie
     ./program
 fi
