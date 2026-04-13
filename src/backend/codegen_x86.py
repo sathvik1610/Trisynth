@@ -73,8 +73,8 @@ class X86Generator:
             self._emit(f"    sub rsp, {frame.total_size}")
 
         # 3. Emit Body
-        for instr in instrs[1:-1]:  # Skip FUNC_START/END
-            self._emit_instruction(instr)
+        for i in range(1, len(instrs) - 1):  # Skip FUNC_START/END
+            self._emit_instruction(instrs[i])
 
         # 4. Emit Epilogue
         self._emit(f".exit_{func_name}:")

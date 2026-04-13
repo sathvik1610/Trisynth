@@ -7,18 +7,17 @@ from src.frontend.lexer import Lexer
 from src.frontend.parser import Parser
 
 def main():
+    # cli entry
     parser = argparse.ArgumentParser(description="Trisynth Native Compiler")
     parser.add_argument('file', nargs='?', help="Source file to compile (.tri)")
     parser.add_argument('--demo', action='store_true', help="Run in interactive demo mode")
     parser.add_argument('--arch', choices=['x86', 'riscv', 'both'], default='x86',
                         help="Target architecture (default: x86)")
-    # Verbosity
     parser.add_argument('--tokens', action='store_true', help='Print Lexer tokens and halt')
     parser.add_argument('--ast', action='store_true', help='Print Abstract Syntax Tree and halt')
     parser.add_argument('--ir', action='store_true', help='Print Intermediate Representation and halt')
     parser.add_argument('--asm', action='store_true', help='Print generated Assembly strings and halt')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print all compilation details')
-    # Analysis
     parser.add_argument('--compare-asm', action='store_true', help='Compile to both x86 and RISC-V and print side-by-side')
     parser.add_argument('--benchmark', action='store_true', help='Compile, natively execute, and compare speeds of x86 vs RISC-V')
     
@@ -45,6 +44,7 @@ def run_demo(args):
         return
 
 def compile_file(filepath, args):
+    # read source and kick off compilation
     try:
         with open(filepath, 'r') as f:
             source_code = f.read()
@@ -55,6 +55,7 @@ def compile_file(filepath, args):
         print(f"Error: {e}")
 
 class ASTPrinter:
+    # helper to print ast nicely
     def __init__(self):
         self.output = []
 
@@ -71,7 +72,6 @@ class ASTPrinter:
                 self.print_tree(child, new_prefix, i == len(node) - 1)
             return
             
-        # Get node name and attributes to print
         node_name = node.__class__.__name__
         attrs = []
         children = []
@@ -134,7 +134,6 @@ class ASTPrinter:
         self.output.append(f"{prefix}{marker}{node_name}{attr_str}")
 
         new_prefix = prefix + ("    " if is_last else "│   ")
-        # Filter None children
         children = [c for c in children if c is not None]
         for i, child in enumerate(children):
             self.print_tree(child, new_prefix, i == len(children) - 1)
@@ -145,27 +144,24 @@ class ASTPrinter:
         return "\n".join(self.output)
 
 class IRInterpreter:
-    """
-    A simple stack-based interpreter to execute Trisynth Intermediate Representation (IR) directly.
-    """
+    # stack-based interpreter for trisynth ir.
     def __init__(self, ir):
         self.ir = ir
-        self.locals = {}       # Variable storage
-        self.arrays = {}       # Array storage
-        self.pc = 0            # Program counter
-        self.call_stack = []   # Return addresses and saved locals
-        self.param_stack = []  # Passing parameters between functions
-        self.functions = {}    # Maps function name to starting PC
-        self.labels = {}       # Maps label name to PC index (pre-built)
-        self.return_value = None  # Stores most recent function return value
+        self.locals: "dict" = {}
+        self.arrays: "dict" = {}
+        self.pc = 0
+        self.call_stack = []
+        self.param_stack = []
+        self.functions = {}
+        self.labels = {}
+        self.return_value = None
 
-        # Build function and label lookup tables in one pass
         import src.ir.instructions as inst
         for i, instr in enumerate(self.ir):
             if instr.opcode == inst.OpCode.FUNC_START:
-                self.functions[instr.arg1] = i   # arg1 = function name
+                self.functions[instr.arg1] = i
             elif instr.opcode == inst.OpCode.LABEL:
-                self.labels[instr.arg1] = i       # arg1 = label name
+                self.labels[instr.arg1] = i
                 
     def run(self, main_func="main"):
         if main_func not in self.functions:
@@ -183,11 +179,10 @@ class IRInterpreter:
                 pass
             elif op == inst.OpCode.FUNC_END:
                 if not self.call_stack:
-                    break # End of main
+                    break
                 state = self.call_stack.pop()
                 self.pc = state['pc']
                 self.locals = state['locals']
-                # Store return value into caller's result register (for void funcs, result may be None)
                 if state.get('result') and self.return_value is not None:
                     self.locals[state['result']] = self.return_value
                     self.return_value = None
@@ -195,34 +190,30 @@ class IRInterpreter:
                 val = self.locals.get(instr.arg1, instr.arg1)
                 self.param_stack.append(val)
             elif op == inst.OpCode.PARAM_REF:
-                self.param_stack.append(instr.arg1) # Pass array name as reference
+                self.param_stack.append(instr.arg1)
             elif op == inst.OpCode.LOAD_PARAM:
-                val = self.param_stack.pop(0) # FIFO
+                val = self.param_stack.pop(0)
                 self.locals[instr.result] = val
             elif op == inst.OpCode.LOAD_PARAM_REF:
                 val = self.param_stack.pop(0)
-                self.locals[instr.result] = val # Store reference name
+                self.locals[instr.result] = val
             elif op == inst.OpCode.CALL:
-                # Save state, including where to store the return value
                 self.call_stack.append({
                     'pc': self.pc,
                     'locals': self.locals.copy(),
-                    'result': instr.result,  # register to store return val in caller
+                    'result': instr.result,
                 })
-                # Jump to function
                 self.pc = self.functions[instr.arg1]
-                self.locals = {} # Clean locals for new frame
+                self.locals = {}
                 self.return_value = None
             elif op == inst.OpCode.RETURN:
                 if instr.arg1 is not None:
                     self.return_value = self.locals.get(instr.arg1, instr.arg1)
-
                 if not self.call_stack:
                     break
                 state = self.call_stack.pop()
                 self.pc = state['pc']
                 self.locals = state['locals']
-                # Store return value into caller's result register
                 if state.get('result') and self.return_value is not None:
                     self.locals[state['result']] = self.return_value
                     self.return_value = None
@@ -230,10 +221,7 @@ class IRInterpreter:
                 val = self.locals.get(instr.arg1, instr.arg1)
                 print(val)
             elif op == inst.OpCode.PRINT_STR:
-                # The raw string could still have escape codes, Python print handles most nicely,
-                # though realistically ast.StringLiteral holds raw text.
                 val = self.locals.get(instr.arg1, instr.arg1)
-                # Ensure escape characters like \n actually process in string
                 processed_val = str(val).encode('utf-8').decode('unicode_escape')
                 print(processed_val, end='')
             elif op == inst.OpCode.LOAD_STR:
@@ -263,12 +251,10 @@ class IRInterpreter:
                 right = self.locals.get(instr.arg2, instr.arg2)
                 self.locals[instr.result] = 1 if int(left) > int(right) else 0
             elif op == inst.OpCode.JMP_IF_FALSE:
-                # arg1 = condition var; arg2 = target label
                 cond = self.locals.get(instr.arg1, instr.arg1)
                 if not cond or cond == 0:
                     self.pc = self.labels[instr.arg2]
             elif op == inst.OpCode.JMP:
-                # arg1 = target label
                 self.pc = self.labels[instr.arg1]
             elif op == inst.OpCode.LTE:
                 left = self.locals.get(instr.arg1, instr.arg1)
@@ -315,7 +301,74 @@ class IRInterpreter:
                 
             self.pc += 1
 
+def _resolve_toolchain():
+    # figure out whether we're on win native, wsl, or linux
+    import platform
+    import shutil
+    import subprocess
+
+    system = platform.system()
+
+    if system != "Windows":
+        return {
+            "mode":     "linux",
+            "prefix":   [],
+            "obj_fmt":  "elf64",
+            "obj_ext":  ".o",
+            "exe":      "program",
+            "run":      ["./program"],
+            "tag":      "",
+        }
+
+    if shutil.which("wsl") is not None:
+        try:
+            subprocess.run(
+                ["wsl", "nasm", "--version"],
+                capture_output=True, timeout=5, check=True
+            )
+            return {
+                "mode":     "wsl",
+                "prefix":   ["wsl"],
+                "obj_fmt":  "elf64",
+                "obj_ext":  ".o",
+                "exe":      "program",
+                "run":      ["wsl", "./program"],
+                "tag":      " over WSL",
+            }
+        except Exception:
+            pass
+
+    if shutil.which("nasm") is not None and shutil.which("gcc") is not None:
+        return {
+            "mode":     "windows_native",
+            "prefix":   [],
+            "obj_fmt":  "win64",
+            "obj_ext":  ".obj",
+            "exe":      "program.exe",
+            "run":      ["program.exe"],
+            "tag":      " (native Windows)",
+        }
+
+    return None
+
+
+def _toolchain_install_hint():
+    import platform
+    system = platform.system()
+    if system == "Windows":
+        return (
+            "  Run `setup.bat` (double-click or as Administrator) to auto-install everything.\n"
+            "  Note: RISC-V is not supported on native Windows — use WSL for that."
+        )
+    else:
+        return (
+            "  Run: curl -sSL <repo-url>/setup.sh | bash\n"
+            "  (Or run `bash setup.sh` in the project root) to auto-install everything."
+        )
+
+
 def process_source(source_code, args):
+    # run all compiler phases
     import time
     start_time = time.time()
     
@@ -383,7 +436,6 @@ def process_source(source_code, args):
         print(f"  ❌ Failed: {e}")
         return
 
-    from src.optimization.optimizer import Optimizer
     from src.optimization.constant_fold import ConstantFolding
     from src.optimization.dead_code import DeadCodeElimination
     from src.optimization.strength_reduction import StrengthReduction
@@ -422,9 +474,6 @@ def process_source(source_code, args):
         print(f"  ❌ Failed: {e}")
         return
 
-    # Interpreter execution moved below backends
-
-    # Write AST to output.asm and output_riscv.s regardless, to maintain the state
     from src.backend.codegen_x86 import X86Generator
     from src.backend.codegen_riscv import RISCVGenerator
     
@@ -449,70 +498,94 @@ def process_source(source_code, args):
                 print(f"  {line}")
         if args.asm or args.compare_asm: return
 
-    # NATIVE HARDWARE EXECUTION
     if verbose:
         print("\n==================================")
         print("           PROGRAM OUTPUT           ")
         print("==================================\n")
-        
+
     try:
         import subprocess
-        import platform
-        
-        is_windows = platform.system() == "Windows"
-        cmd_prefix = ["wsl"] if is_windows else []
-        
-        # Resolve bundled NASM for Linux
-        if hasattr(sys, '_MEIPASS'):
-            bundled_nasm = os.path.join(sys._MEIPASS, 'bin', 'linux', 'nasm')
+
+        tc = _resolve_toolchain()
+
+        if tc is None:
+            print("  ❌ No assembler toolchain found.")
+            print(_toolchain_install_hint())
+            return
+
+        if verbose:
+            print(f"  [Toolchain: {tc['mode']}]")
+
+        if tc['mode'] == 'linux':
+            meipass = getattr(sys, '_MEIPASS', None)
+            if meipass:
+                bundled_nasm = os.path.join(meipass, 'bin', 'linux', 'nasm')
+            else:
+                bundled_nasm = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bin', 'linux', 'nasm'))
+            nasm_exe = bundled_nasm if os.path.exists(bundled_nasm) else "nasm"
         else:
-            bundled_nasm = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bin', 'linux', 'nasm'))
-            
-        nasm_exe = bundled_nasm if (not is_windows and os.path.exists(bundled_nasm)) else "nasm"
-        
+            nasm_exe = "nasm"
+
+        obj_fmt  = str(tc['obj_fmt'])
+        obj_ext  = str(tc['obj_ext'])
+        exe_name = str(tc['exe'])
+        prefix   = list(tc['prefix'])
+        run_cmd  = list(tc['run'])
+        tag      = str(tc['tag'])
+
         if args.benchmark:
             print(f"  [Benchmarking Mode -> Building X86-64 Native & RISC-V QEMU]")
-            # X86 
+
+            if tc['mode'] == 'windows_native':
+                print("  ⚠️  Benchmark mode requires WSL or Linux for RISC-V/QEMU support.")
+
             x86_start = time.time()
-            subprocess.run(cmd_prefix + [nasm_exe, "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
-            subprocess.run(cmd_prefix + ["gcc", "output.o", "-o", "program", "-no-pie"], check=True)
-            res_x86 = subprocess.run(cmd_prefix + ["./program"], text=True, capture_output=True)
+            subprocess.run(prefix + [nasm_exe, "-f", obj_fmt, "output.asm", "-o", f"output{obj_ext}"], check=True)
+            link_flags = ["-no-pie"] if tc['mode'] != 'windows_native' else []
+            subprocess.run(prefix + ["gcc", f"output{obj_ext}", "-o", exe_name] + link_flags, check=True)
+            res_x86 = subprocess.run(run_cmd, text=True, capture_output=True)
             x86_elapsed = (time.time() - x86_start) * 1000
-            
-            # RISC-V
-            rv_start = time.time()
-            subprocess.run(cmd_prefix + ["riscv64-linux-gnu-gcc", "output_riscv.s", "-o", "program_riscv", "-static"], check=True)
-            res_rv = subprocess.run(cmd_prefix + ["qemu-riscv64", "./program_riscv"], text=True, capture_output=True)
-            rv_elapsed = (time.time() - rv_start) * 1000
-            
-            print(f"\n[X86-64 NATIVE EXECUTION]\n{res_x86.stdout}")
-            print(f"[RISC-V QEMU EXECUTION]\n{res_rv.stdout}")
-            print(f"\n  ✅ Benchmarking Complete")
-            print(f"  ⚡ Intel x86-64 WSL Natively: {x86_elapsed:.2f} ms")
-            print(f"  🔍 RISC-V QEMU Emulation    : {rv_elapsed:.2f} ms")
-        
+
+            if tc['mode'] != 'windows_native':
+                rv_start = time.time()
+                subprocess.run(prefix + ["riscv64-linux-gnu-gcc", "output_riscv.s", "-o", "program_riscv", "-static"], check=True)
+                res_rv = subprocess.run(prefix + ["qemu-riscv64", "./program_riscv"], text=True, capture_output=True)
+                rv_elapsed = (time.time() - rv_start) * 1000
+                print(f"\n[X86-64 NATIVE EXECUTION]\n{res_x86.stdout}")
+                print(f"[RISC-V QEMU EXECUTION]\n{res_rv.stdout}")
+                print(f"\n  ✅ Benchmarking Complete")
+                print(f"  ⚡ x86-64{tag}: {x86_elapsed:.2f} ms")
+                print(f"  🔍 RISC-V QEMU Emulation: {rv_elapsed:.2f} ms")
+            else:
+                print(f"\n[X86-64 NATIVE EXECUTION]\n{res_x86.stdout}")
+                print(f"\n  ✅ X86-64 Benchmark Complete")
+                print(f"  ⚡ x86-64{tag}: {x86_elapsed:.2f} ms")
+
         else:
             if verbose: print("  [Invoking Native Assembler & Linker...]")
-            
-            wsl_tag = " over WSL" if is_windows else ""
-            
+
+            link_flags = ["-no-pie"] if tc['mode'] != 'windows_native' else []
+
             if args.arch in ('x86', 'both'):
-                subprocess.run(cmd_prefix + [nasm_exe, "-f", "elf64", "output.asm", "-o", "output.o"], check=True)
-                subprocess.run(cmd_prefix + ["gcc", "output.o", "-o", "program", "-no-pie"], check=True)
-                result = subprocess.run(cmd_prefix + ["./program"], text=True, capture_output=True)
+                subprocess.run(prefix + [nasm_exe, "-f", obj_fmt, "output.asm", "-o", f"output{obj_ext}"], check=True)
+                subprocess.run(prefix + ["gcc", f"output{obj_ext}", "-o", exe_name] + link_flags, check=True)
+                result = subprocess.run(run_cmd, text=True, capture_output=True)
                 print(result.stdout, end="")
-            elif args.arch == 'riscv':
-                subprocess.run(cmd_prefix + ["riscv64-linux-gnu-gcc", "output_riscv.s", "-o", "program_riscv", "-static"], check=True)
-                result = subprocess.run(cmd_prefix + ["qemu-riscv64", "./program_riscv"], text=True, capture_output=True)
-                print(result.stdout, end="")
-                wsl_tag = " over QEMU-RISCV64"
+
+            if args.arch in ('riscv', 'both'):
+                if tc['mode'] == 'windows_native':
+                    print("  ⚠️  RISC-V target requires WSL or Linux. Skipping.")
+                else:
+                    subprocess.run(prefix + ["riscv64-linux-gnu-gcc", "output_riscv.s", "-o", "program_riscv", "-static"], check=True)
+                    result = subprocess.run(prefix + ["qemu-riscv64", "./program_riscv"], text=True, capture_output=True)
+                    print(result.stdout, end="")
 
             end_time = time.time()
             elapsed = (end_time - start_time) * 1000
             if verbose:
                 print(f"\n  ✅ Native Hardware Execution Complete")
-                print(f"  ⚡ Trisynth natively assembled & executed{wsl_tag} in {elapsed:.2f} ms")
-                
+                print(f"  ⚡ Trisynth natively assembled & executed{tc['tag']} in {elapsed:.2f} ms")
+
     except Exception as e:
         print(f"  ❌ Failed: {e}")
 
