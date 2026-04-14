@@ -42,6 +42,8 @@ class TokenType(Enum):
     STAR = auto()           # *
     SLASH = auto()          # /
     MODULO = auto()         # %
+    LSHIFT = auto()         # <<
+    RSHIFT = auto()         # >>
     INCREMENT = auto()      # ++
     DECREMENT = auto()      # --
 

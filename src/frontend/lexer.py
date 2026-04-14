@@ -140,6 +140,8 @@ class Lexer:
             (r'!=', TokenType.NEQ),
             (r'<=', TokenType.LTE),
             (r'>=', TokenType.GTE),
+            (r'<<', TokenType.LSHIFT),
+            (r'>>', TokenType.RSHIFT),
             (r'&&', TokenType.AND),
             (r'\|\|', TokenType.OR),
 

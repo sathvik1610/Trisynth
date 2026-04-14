@@ -9,7 +9,7 @@ def _analyze(code):
     analyzer.analyze(ast)
 
 def test_valid_program():
-    code = "int x = 10; int get_x() { return x; }"
+    code = "int x = 10; int get_x() { return x; } void main() {}"
     _analyze(code)  # Should not raise
 
 def test_undeclared_variable():
@@ -22,7 +22,7 @@ def test_type_mismatch():
 
 def test_missing_return():
     with pytest.raises(Exception, match="Missing return statement"):
-        _analyze("int foo() { int x = 5; }")
+        _analyze("int foo() { int x = 5; } void main() {}")
 
 def test_invalid_argument_count():
     code = "int add(int a, int b) { return a+b; } void main() { int x = add(5); }"

@@ -12,7 +12,7 @@ def _gen_ir(code):
     return ir
 
 def test_basic_math_ir():
-    ir = _gen_ir("int a = 5; int b = 10; int c = a + b;")
+    ir = _gen_ir("void main() { int a = 5; int b = 10; int c = a + b; }")
     # Ensure constants load and ADD instruction is formed
     ops = [i.opcode for i in ir]
     assert OpCode.MOV in ops
@@ -27,7 +27,7 @@ def test_if_statement_ir():
     assert OpCode.LABEL in ops
 
 def test_function_ir():
-    ir = _gen_ir("int identity(int x) { return x; }")
+    ir = _gen_ir("int identity(int x) { return x; } void main() {}")
     ops = [i.opcode for i in ir]
     assert OpCode.FUNC_START in ops
     assert OpCode.LOAD_PARAM in ops

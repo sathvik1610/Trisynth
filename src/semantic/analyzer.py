@@ -39,6 +39,9 @@ class SemanticAnalyzer:
             if isinstance(decl, ast.FunctionDecl):
                 try:
                     self.symbol_table.define(decl.name, decl.return_type, category='function')
+                    # FIX: Inject param types NOW during hoisting so forward calls are statically verified!
+                    func_sym = self.symbol_table.resolve(decl.name)
+                    func_sym.param_types = [t for t, n in decl.params]
                 except:
                      pass # Already defined? Error handled deeped or ignore duplicate in pass 1? 
                      # Analyzer logic usually stops at first error. 
@@ -80,7 +83,15 @@ class SemanticAnalyzer:
             else:
                 self.visit(decl)
 
+        # Pass 3: End of Program Validation
+        if not self.symbol_table.resolve('main'):
+            raise Exception("E004 Semantic Error: Program is missing required entry point 'main' function.")
+
     def visit_VarDecl(self, node: ast.VarDecl):
+        # 0. Block unsupported intrinsic types that corrupt NASM execution
+        if node.type_name in ('float', 'char'):
+            raise Exception(f"E002 Semantic Error: Unsupported intrinsic type '{node.type_name}' for variable '{node.name}'.")
+
         # 1. Check initializer type (if exists)
         if node.initializer:
             init_type = self.visit(node.initializer)
@@ -133,15 +144,8 @@ class SemanticAnalyzer:
 
     def visit_IfStmt(self, node: ast.IfStmt):
         cond_type = self.visit(node.condition)
-        if cond_type != 'bool':
-             # Allow int as condition? For now, strict bool.
-             # Actually, C allows int. Let's start strict.
-             # Wait, our relational ops return bool.
-             pass 
-             # If we want to allow int, we check compatibility. 
-             # For strict design:
-             if cond_type not in ('bool', 'int'):
-                 raise Exception(f"Type Error: If condition must be bool or int, got '{cond_type}'.")
+        if cond_type not in ('bool', 'int'):
+            raise Exception(f"E002 Type Error: If condition must evaluate to bool or int, got '{cond_type}'.")
 
         self.visit(node.then_branch)
         if node.else_branch:
@@ -156,11 +160,20 @@ class SemanticAnalyzer:
         self.loop_depth -= 1
 
     def visit_ReturnStmt(self, node: ast.ReturnStmt):
-        # TODO: Check against enclosing function return type.
-        # Without reference to parent function, hard to check return type here.
-        # We can store 'current_function_return_type' in analyzer state.
+        if not self.current_function:
+            raise Exception("E003 Semantic Error: 'return' statement outside of function.")
+        
+        expected_ret_type = self.current_function[1]
+        
         if node.value:
-            self.visit(node.value)
+            actual_ret_type = self.visit(node.value)
+            if expected_ret_type == 'void':
+                 raise Exception(f"E002 Semantic Error: Function '{self.current_function[0]}' is void and cannot return a value.")
+            if actual_ret_type != expected_ret_type:
+                 raise Exception(f"E002 Type Error: Function '{self.current_function[0]}' expects return type '{expected_ret_type}', but returned '{actual_ret_type}'.")
+        else:
+            if expected_ret_type != 'void':
+                 raise Exception(f"E002 Type Error: Function '{self.current_function[0]}' expects return type '{expected_ret_type}', but returned nothing.")
 
     def visit_PrintStmt(self, node: ast.PrintStmt):
         expr_type = self.visit(node.expression)
@@ -172,6 +185,8 @@ class SemanticAnalyzer:
     # --- Expressions (Return Type String) ---
 
     def visit_Literal(self, node: ast.Literal) -> str:
+        if node.type_name in ('float', 'char'):
+             raise Exception(f"E002 Semantic Error: Literal type '{node.type_name}' is not structurally supported by the backend emission.")
         return node.type_name
 
     def visit_StringLiteral(self, node: ast.StringLiteral) -> str:
@@ -190,6 +205,10 @@ class SemanticAnalyzer:
         # Simple strict type matching
         if left_type != right_type:
             raise Exception(f"Type Error: Type mismatch in binary operation '{node.operator.name}'. Got '{left_type}' and '{right_type}'.")
+        
+        # Ban String Math Pointer Corruption
+        if left_type == 'string' and node.operator.name not in ('EQ', 'NEQ'):
+            raise Exception(f"E002 Semantic Error: Operator '{node.operator.name}' is not structurally supported on string pointers.")
         
         # Result type logic
         # Relational -> bool
@@ -289,6 +308,9 @@ class SemanticAnalyzer:
             
         if not symbol.type_name.endswith("[]"):
             raise Exception(f"Type Error: '{node.name}' is not an array.")
+            
+        if getattr(symbol, 'is_const', False):
+             raise Exception(f"E002 Semantic Error: Cannot mutate elements of const array '{node.name}'.")
             
         index_type = self.visit(node.index)
         if index_type != 'int':

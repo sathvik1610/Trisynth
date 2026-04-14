@@ -355,7 +355,10 @@ class Parser:
         return self._parse_binary(self.parse_relational, [TokenType.EQ, TokenType.NEQ])
 
     def parse_relational(self) -> ast.Expr:
-        return self._parse_binary(self.parse_additive, [TokenType.LT, TokenType.GT, TokenType.LTE, TokenType.GTE])
+        return self._parse_binary(self.parse_shift, [TokenType.LT, TokenType.GT, TokenType.LTE, TokenType.GTE])
+
+    def parse_shift(self) -> ast.Expr:
+        return self._parse_binary(self.parse_additive, [TokenType.LSHIFT, TokenType.RSHIFT])
 
     def parse_additive(self) -> ast.Expr:
         return self._parse_binary(self.parse_multiplicative, [TokenType.PLUS, TokenType.MINUS])

@@ -354,7 +354,8 @@ class IRGenerator:
             'PLUS': OpCode.ADD, 'MINUS': OpCode.SUB, 
             'STAR': OpCode.MUL, 'SLASH': OpCode.DIV, 'MODULO': OpCode.MOD,
             'LT': OpCode.LT, 'GT': OpCode.GT, 'LTE': OpCode.LTE, 'GTE': OpCode.GTE,
-            'EQ': OpCode.EQ, 'NEQ': OpCode.NEQ
+            'EQ': OpCode.EQ, 'NEQ': OpCode.NEQ,
+            'LSHIFT': OpCode.LSHIFT, 'RSHIFT': OpCode.RSHIFT
         }
         
         opcode = op_map.get(node.operator.name)
