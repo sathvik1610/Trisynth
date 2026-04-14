@@ -1,113 +1,118 @@
+# This file simply defines all the different types of tokens we encounter while reading the source code, basically our dictionary of symbols.
+
 from enum import Enum, auto
 
 class TokenType(Enum):
-    """
-    Enumeration of all possible token types in the Trisynth language.
-    """
-    # --- Literals ---
-    INTEGER = auto()        # 123
-    FLOAT = auto()          # 12.34
-    IDENTIFIER = auto()     # variable_name
-    STRING = auto()         # "string literal"
-    CHAR = auto()           # 'c'
+\
+\
+       
+                      
+    INTEGER = auto()             
+    FLOAT = auto()                 
+    IDENTIFIER = auto()                    
+    STRING = auto()                           
+    CHAR = auto()                
 
-    # --- Keywords (Types) ---
-    KW_INT = auto()         # int
-    KW_UINT32 = auto()      # uint32
-    KW_FLOAT = auto()       # float
-    KW_BOOL = auto()        # bool
-    KW_CHAR = auto()        # char
-    KW_VOID = auto()        # void
-    KW_CONST = auto()       # const
-    KW_STRING = auto()      # string
+                              
+    KW_INT = auto()              
+    KW_UINT32 = auto()              
+    KW_FLOAT = auto()              
+    KW_BOOL = auto()              
+    KW_CHAR = auto()              
+    KW_VOID = auto()              
+    KW_CONST = auto()              
+    KW_STRING = auto()              
 
-    # --- Keywords (Control Flow) ---
-    KW_IF = auto()          # if
-    KW_ELSE = auto()        # else
-    KW_WHILE = auto()       # while
-    KW_FOR = auto()         # for
-    KW_BREAK = auto()       # break
-    KW_CONTINUE = auto()    # continue
-    KW_RETURN = auto()      # return
+                                     
+    KW_IF = auto()              
+    KW_ELSE = auto()              
+    KW_WHILE = auto()              
+    KW_FOR = auto()              
+    KW_BREAK = auto()              
+    KW_CONTINUE = auto()              
+    KW_RETURN = auto()              
 
-    # --- Keywords (I/O & Built-ins) ---
-    KW_PRINT = auto()       # print
-    KW_READ_INT = auto()    # readInt
-    KW_TRUE = auto()        # true
-    KW_FALSE = auto()       # false
+                                        
+    KW_PRINT = auto()              
+    KW_READ_INT = auto()             
+    KW_TRUE = auto()              
+    KW_FALSE = auto()              
 
-    # --- Operators (Arithmetic) ---
-    PLUS = auto()           # +
-    MINUS = auto()          # -
-    STAR = auto()           # *
-    SLASH = auto()          # /
-    MODULO = auto()         # %
-    LSHIFT = auto()         # <<
-    RSHIFT = auto()         # >>
-    INCREMENT = auto()      # ++
-    DECREMENT = auto()      # --
+                                    
+    PLUS = auto()              
+    MINUS = auto()             
+    STAR = auto()              
+    SLASH = auto()             
+    MODULO = auto()            
+    LSHIFT = auto()             
+    RSHIFT = auto()             
+    INCREMENT = auto()          
+    DECREMENT = auto()          
 
-    # --- Operators (Relational) ---
-    EQ = auto()             # ==
-    NEQ = auto()            # !=
-    LT = auto()             # <
-    GT = auto()             # >
-    LTE = auto()            # <=
-    GTE = auto()            # >=
+                                    
+    EQ = auto()                 
+    NEQ = auto()                
+    LT = auto()                
+    GT = auto()                
+    LTE = auto()                
+    GTE = auto()                
 
-    # --- Operators (Logical) ---
-    AND = auto()            # &&
-    OR = auto()             # ||
-    NOT = auto()            # !
+                                 
+    AND = auto()                
+    OR = auto()                 
+    NOT = auto()               
 
-    # --- Assignment ---
-    ASSIGN = auto()         # =
+                        
+    ASSIGN = auto()            
 
-    # --- Delimiters ---
-    LPAREN = auto()         # (
-    RPAREN = auto()         # )
-    LBRACE = auto()         # {
-    RBRACE = auto()         # }
-    LBRACKET = auto()       # [
-    RBRACKET = auto()       # ]
-    SEMICOLON = auto()      # ;
-    COMMA = auto()          # ,
+                        
+    LPAREN = auto()            
+    RPAREN = auto()            
+    LBRACE = auto()            
+    RBRACE = auto()            
+    LBRACKET = auto()          
+    RBRACKET = auto()          
+    SEMICOLON = auto()         
+    COMMA = auto()             
 
-    # --- Special ---
-    EOF = auto()            # End of File
-    ERROR = auto()          # Lexical Error (Unknown character)
+                     
+    EOF = auto()                         
+    ERROR = auto()                                             
 
 
 class Token:
-    """
-    Represents a single lexical unit (token) in the source code.
-    """
+\
+\
+       
     def __init__(self, type: TokenType, value: str, line: int, column: int):
-        """
-        Initialize a new Token.
-
-        Args:
-            type (TokenType): The type of the token.
-            value (str): The actual text content of the token (lexeme).
-            line (int): The line number where the token starts (1-based).
-            column (int): The column number where the token starts (1-based).
-        """
+\
+\
+\
+\
+\
+\
+\
+\
+           
+        # This initializes the base properties.
         self.type = type
         self.value = value
         self.line = line
         self.column = column
 
     def __repr__(self):
-        """
-        String representation of the token for debugging purposes.
-        Format: Token(Type, 'Value', Line:Col)
-        """
+\
+\
+\
+           
+        # This handles the primary logic for repr operations.
         return f"Token({self.type.name}, {repr(self.value)}, {self.line}:{self.column})"
 
     def __eq__(self, other):
-        """
-        Equality check for testing convenience.
-        """
+\
+\
+           
+        # This handles the primary logic for eq operations.
         if not isinstance(other, Token):
             return False
         return (self.type == other.type and

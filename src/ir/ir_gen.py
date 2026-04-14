@@ -1,83 +1,92 @@
+# This is where the magic of turning the raw syntax tree into a flat sequence of intermediate instructions happens. We walk the tree and generate the lower-level operations.
+
 from typing import List, Union
 import src.frontend.ast as ast
 from src.ir.instructions import Instruction, OpCode
 
 class IRGenerator:
-    """
-    converts AST to Intermediate Representation (Three-Address Code).
-    """
+
     def __init__(self):
+        # This initializes the base properties.
         self.instructions: List[Instruction] = []
         self._temp_counter = 0
         self._label_counter = 0
 
-        # Scope Management for Unique Renaming
         self.scopes = [{}]
         self._var_counter = 0
 
-        # Track all declared array *unique* names so PARAM_REF is emitted correctly
+                                                                                   
         self._array_names: set = set()
 
-        # Loop Control Stack for break/continue
+                                               
         self.loop_stack = []
 
     def generate(self, program: ast.Program) -> List[Instruction]:
+        # This takes the parsed data and spits out the actual generated implementation.
         self.visit(program)
         return self.instructions
 
     def _new_temp(self) -> str:
+        # This handles the primary logic for new temp operations.
         name = f"t{self._temp_counter}"
         self._temp_counter += 1
         return name
 
     def _new_label(self) -> str:
+        # This handles the primary logic for new label operations.
         name = f"L{self._label_counter}"
         self._label_counter += 1
         return name
 
     def _get_unique_name(self, name: str) -> str:
-        """Generates a unique name for a new variable declaration."""
+                                                                     
+        # This handles the primary logic for get unique name operations.
         unique = f"{name}_{self._var_counter}"
         self._var_counter += 1
         return unique
 
     def _resolve(self, name: str) -> str:
-        """Resolves a source name to its current unique IR name."""
-        # Search from inner-most scope to outer-most
+                                                                   
+                                                    
+        # This handles the primary logic for resolve operations.
         for scope in reversed(self.scopes):
             if name in scope:
                 return scope[name]
         raise Exception(f"IR Gen Error: Variable '{name}' not found in scope.")
 
     def _enter_scope(self):
+        # This handles the primary logic for enter scope operations.
         self.scopes.append({})
 
     def _exit_scope(self):
+        # This handles the primary logic for exit scope operations.
         self.scopes.pop()
 
     def _emit(self, opcode: OpCode, arg1=None, arg2=None, result=None):
+        # This handles the primary logic for emit operations.
         instr = Instruction(opcode, arg1, arg2, result)
         self.instructions.append(instr)
 
     def visit(self, node: ast.ASTNode) -> Union[str, int, float]:
-        """
-        Generic visitor. Returns the name of the variable/temp holding the result (if any) OR a literal value.
-        """
+
+        # This handles the primary logic for visit operations.
         method_name = f'visit_{type(node).__name__}'
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
     def generic_visit(self, node: ast.ASTNode):
+        # This acts as our fallback for any nodes that don't have a specific handler.
         raise Exception(f"No visit_{type(node).__name__} method defined in IRGenerator.")
 
-    # --- Visitor Methods ---
 
     def visit_Program(self, node: ast.Program):
+        # This specifically parses and processes Program structures.
         for decl in node.declarations:
             self.visit(decl)
 
     def visit_VarDecl(self, node: ast.VarDecl):
-        # int x = 10; -> MOV x_N, 10
+                                    
+        # This specifically parses and processes VarDecl structures.
         unique_name = self._get_unique_name(node.name)
         self.scopes[-1][node.name] = unique_name
         
@@ -86,13 +95,15 @@ class IRGenerator:
             self._emit(OpCode.MOV, arg1=value_src, result=unique_name)
 
     def visit_ArrayDecl(self, node: ast.ArrayDecl):
-        # int x[10]; -> ARR_DECL x_N, size
+                                          
+        # This specifically parses and processes ArrayDecl structures.
         unique_name = self._get_unique_name(node.name)
         self.scopes[-1][node.name] = unique_name
-        self._array_names.add(unique_name)  # Track for PARAM_REF detection in call sites
+        self._array_names.add(unique_name)                                               
         self._emit(OpCode.ARR_DECL, arg1=node.size, result=unique_name)
 
     def visit_FunctionDecl(self, node: ast.FunctionDecl):
+        # This specifically parses and processes FunctionDecl structures.
         self._emit(OpCode.FUNC_START, arg1=node.name)
         self._enter_scope()
         
@@ -107,15 +118,17 @@ class IRGenerator:
         self.visit(node.body)
         self._exit_scope()
         
-        self._emit(OpCode.FUNC_END, arg1=node.name)  # ← always emit, no condition
+        self._emit(OpCode.FUNC_END, arg1=node.name)                               
 
     def visit_Block(self, node: ast.Block):
+        # This specifically parses and processes Block structures.
         self._enter_scope()
         for stmt in node.statements:
             self.visit(stmt)
         self._exit_scope()
 
     def visit_IfStmt(self, node: ast.IfStmt):
+        # This specifically parses and processes IfStmt structures.
         cond_temp = self.visit(node.condition)
         
         label_else = self._new_label() if node.else_branch else None
@@ -134,10 +147,10 @@ class IRGenerator:
         self._emit(OpCode.LABEL, arg1=label_end)
 
     def visit_WhileStmt(self, node: ast.WhileStmt):
+        # This specifically parses and processes WhileStmt structures.
         label_start = self._new_label()
         label_end = self._new_label()
 
-        # Push to loop stack: (continue_target, break_target)
         self.loop_stack.append((label_start, label_end))
 
         self._emit(OpCode.LABEL, arg1=label_start)
@@ -152,17 +165,16 @@ class IRGenerator:
 
 
     def visit_ForStmt(self, node: ast.ForStmt):
-        # for (init; cond; update) body
-        # Scope for init variable? 
-        # C99 allows int i=0 inside for. So we should enter scope.
+
+        # This specifically parses and processes ForStmt structures.
         self._enter_scope()
         
         if node.init:
-            self.visit(node.init) # Decl or ExprStmt
+            self.visit(node.init)                   
 
-        label_start = self._new_label() # Check condition
-        label_update = self._new_label() # Increment
-        label_end = self._new_label()   # Exit
+        label_start = self._new_label()                  
+        label_update = self._new_label()            
+        label_end = self._new_label()         
 
         self.loop_stack.append((label_update, label_end))
 
@@ -186,24 +198,28 @@ class IRGenerator:
         self._exit_scope()
 
     def visit_BreakStmt(self, node: ast.BreakStmt):
+        # This specifically parses and processes BreakStmt structures.
         if not self.loop_stack:
             raise Exception("IR Gen Error: Break outside loop.")
         _, label_break = self.loop_stack[-1]
         self._emit(OpCode.JMP, arg1=label_break)
 
     def visit_ContinueStmt(self, node: ast.ContinueStmt):
+        # This specifically parses and processes ContinueStmt structures.
         if not self.loop_stack:
             raise Exception("IR Gen Error: Continue outside loop.")
         label_continue, _ = self.loop_stack[-1]
         self._emit(OpCode.JMP, arg1=label_continue)
 
     def visit_ReturnStmt(self, node: ast.ReturnStmt):
+        # This specifically parses and processes ReturnStmt structures.
         val = None
         if node.value:
             val = self.visit(node.value)
         self._emit(OpCode.RETURN, arg1=val)
 
     def visit_PrintStmt(self, node: ast.PrintStmt):
+        # This specifically parses and processes PrintStmt structures.
         val = self.visit(node.expression)
         expr_type = getattr(node.expression, '_semantic_type', None)
         if expr_type == 'string' or isinstance(node.expression, ast.StringLiteral):
@@ -212,24 +228,29 @@ class IRGenerator:
             self._emit(OpCode.PRINT, arg1=val)
 
     def visit_ExprStmt(self, node: ast.ExprStmt):
+        # This specifically parses and processes ExprStmt structures.
         self.visit(node.expression)
 
-    # --- Expressions ---
+                         
 
     def visit_Literal(self, node: ast.Literal) -> Union[str, int, float]:
+        # This specifically parses and processes Literal structures.
         if isinstance(node.value, bool):
             return 1 if node.value else 0
         return node.value
 
     def visit_StringLiteral(self, node: ast.StringLiteral) -> str:
+        # This specifically parses and processes StringLiteral structures.
         temp = self._new_temp()
         self._emit(OpCode.LOAD_STR, arg1=node.value, result=temp)
         return temp
 
     def visit_Variable(self, node: ast.Variable) -> str:
+        # This specifically parses and processes Variable structures.
         return self._resolve(node.name)
         
     def visit_ArrayAccess(self, node: ast.ArrayAccess) -> str:
+        # This specifically parses and processes ArrayAccess structures.
         array_name = self._resolve(node.name)
         index_val = self.visit(node.index)
         result = self._new_temp()
@@ -237,17 +258,19 @@ class IRGenerator:
         return result
 
     def visit_ArrayAssignment(self, node: ast.ArrayAssignment) -> str:
+        # This specifically parses and processes ArrayAssignment structures.
         array_name = self._resolve(node.name)
         index_val = self.visit(node.index)
         value_val = self.visit(node.value)
-        self._emit(OpCode.ASTORE, arg1=array_name, arg2=index_val, result=value_val) # ASTORE arr, idx, val (result field reused for val)
+        self._emit(OpCode.ASTORE, arg1=array_name, arg2=index_val, result=value_val)                                                     
         return value_val
 
     def visit_CallExpr(self, node: ast.CallExpr) -> str:
-        # Evaluate arguments
-        arg_info = []  # (temp_name, is_array)
+                            
+        # This specifically parses and processes CallExpr structures.
+        arg_info = []                         
         for arg in node.args:
-            # Only emit PARAM_REF for actual array variables (tracked in _array_names)
+                                                                                      
             if isinstance(arg, ast.Variable):
                 resolved = self._resolve(arg.name)
                 if resolved in self._array_names:
@@ -257,7 +280,7 @@ class IRGenerator:
             else:
                 arg_info.append((self.visit(arg), False))
             
-        # Push arguments (PARAM or PARAM_REF)
+                                             
         for temp_name, is_array in arg_info:
             if is_array:
                 self._emit(OpCode.PARAM_REF, arg1=temp_name)
@@ -265,22 +288,13 @@ class IRGenerator:
                 self._emit(OpCode.PARAM, arg1=temp_name)
             
         result = self._new_temp()
-        # CALL func_name, num_args -> result
+                                            
         self._emit(OpCode.CALL, arg1=node.callee, arg2=len(node.args), result=result)
         return result
 
     def visit_LogicalExpr(self, node: ast.LogicalExpr) -> str:
-        # Short-circuit logic: a && b
-        # t = 0 (false)
-        # if !a jmp end
-        # if !b jmp end
-        # t = 1 (true)
-        # label end
-        
-        # Actually, simpler:
-        # result = new_temp()
-        # MOV result, 0
-        
+
+        # This specifically parses and processes LogicalExpr structures.
         label_true = self._new_label()
         label_false = self._new_label()
         label_end = self._new_label()
@@ -288,15 +302,7 @@ class IRGenerator:
         left = self.visit(node.left)
         
         if node.operator.name == 'AND':
-             # if !left jmp false (actually false/end same here)
-             # simpler: 
-             # MOV result 0
-             # JMP_IF_FALSE left, end
-             # right = visit(right)
-             # JMP_IF_FALSE right, end
-             # MOV result 1
-             # LABEL end
-             
+
              result = self._new_temp()
              self._emit(OpCode.MOV, arg1=0, result=result)
              self._emit(OpCode.JMP_IF_FALSE, arg1=left, arg2=label_end)
@@ -309,31 +315,22 @@ class IRGenerator:
              return result
              
         elif node.operator.name == 'OR':
-             # MOV result 1
-             # JMP_IF_FALSE left, check_right
-             # JMP end (it was true)
-             # LABEL check_right
-             # JMP_IF_FALSE right, set_false
-             # JMP end (it was true)
-             # LABEL set_false
-             # MOV result 0
-             # LABEL end
-             
+
              result = self._new_temp()
              self._emit(OpCode.MOV, arg1=1, result=result)
              
              label_check_right = self._new_label()
              label_set_false = self._new_label()
              
-             # If left is FALSE, we must check right.
+                                                     
              self._emit(OpCode.JMP_IF_FALSE, arg1=left, arg2=label_check_right)
-             # Left was true -> result is 1, jump to end
+                                                        
              self._emit(OpCode.JMP, arg1=label_end)
              
              self._emit(OpCode.LABEL, arg1=label_check_right)
              right = self.visit(node.right)
              self._emit(OpCode.JMP_IF_FALSE, arg1=right, arg2=label_set_false)
-             # Right was true -> result is 1, jump to end
+                                                         
              self._emit(OpCode.JMP, arg1=label_end)
              
              self._emit(OpCode.LABEL, arg1=label_set_false)
@@ -345,6 +342,7 @@ class IRGenerator:
         raise Exception(f"IR Gen Error: Unknown logical op {node.operator.name}")
 
     def visit_BinaryExpr(self, node: ast.BinaryExpr) -> str:
+        # This specifically parses and processes BinaryExpr structures.
         left = self.visit(node.left)
         right = self.visit(node.right)
         
@@ -367,20 +365,21 @@ class IRGenerator:
         return temp
 
     def visit_UnaryExpr(self, node: ast.UnaryExpr) -> str:
+        # This specifically parses and processes UnaryExpr structures.
         if node.operator.name == 'MINUS':
             operand = self.visit(node.operand)
             result = self._new_temp()
-            # 0 - operand
+                         
             self._emit(OpCode.SUB, arg1=0, arg2=operand, result=result)
             return result
         elif node.operator.name == 'NOT':
-             # !operand -> (operand == 0)
+                                         
              operand = self.visit(node.operand)
              result = self._new_temp()
              self._emit(OpCode.EQ, arg1=operand, arg2=0, result=result)
              return result
         elif node.operator.name == 'INCREMENT':
-             # Only for ArrayAccess here (Variables expanded)
+                                                             
              if isinstance(node.operand, ast.ArrayAccess):
                  arr_name = self._resolve(node.operand.name)
                  idx_val = self.visit(node.operand.index)
@@ -410,15 +409,13 @@ class IRGenerator:
         raise Exception(f"IR Gen Error: Unsupported unary operator {node.operator.name}")
 
     def visit_Assignment(self, node: ast.Assignment) -> str:
+        # This specifically parses and processes Assignment structures.
         value = self.visit(node.value)
-        target_name = self._resolve(node.name) # Must exist
+        target_name = self._resolve(node.name)             
         self._emit(OpCode.MOV, arg1=value, result=target_name)
         return target_name
 
     def _is_array(self, name: str) -> bool:
-        """Helper to check if a symbol in the AST/Semantic is an array."""
-        # The SemanticAnalyzer knows this, but IRGen doesn't have symbol table directly.
-        # We need to rely on the AST node or keep a quick track.
-        # How to know without SymbolTable?
-        # A hacky way: IRGen knows ArrayDecl was visited.
-        return f"{name}[]" in [k + "[]" for s in self.scopes for k in s] # Not very reliable because we don't store type.
+
+        # This handles the primary logic for is array operations.
+        return f"{name}[]" in [k + "[]" for s in self.scopes for k in s]                                                 

@@ -30,20 +30,24 @@ else
     fail "gcc not found locally! Please install standard build essentials if possible."
 fi
 
-# Check NASM - If not found, download portable local version
+# Check NASM - Must be installed globally for Linux or compiled locally
 info "Checking for Assembler (nasm)..."
 if command -v nasm &>/dev/null; then
     ok "nasm found globally"
 else
-    info "nasm not found globally. Downloading a portable local version..."
+    info "nasm not found globally. Building a local portable version from source (no sudo needed)..."
     mkdir -p "$SCRIPT_DIR/bin/linux"
     if [ ! -f "$SCRIPT_DIR/bin/linux/nasm" ]; then
-        curl -sSL "https://www.nasm.us/pub/nasm/releasebuilds/2.16.01/linux/nasm-2.16.01-linux.zip" -o nasm.zip
-        unzip -q -j nasm.zip "nasm-2.16.01/nasm" -d "$SCRIPT_DIR/bin/linux"
-        chmod +x "$SCRIPT_DIR/bin/linux/nasm"
-        rm nasm.zip
+        curl -sSL "https://www.nasm.us/pub/nasm/releasebuilds/2.16.01/nasm-2.16.01.tar.xz" -o nasm.tar.xz
+        tar -xf nasm.tar.xz
+        cd nasm-2.16.01 || exit
+        ./configure > /dev/null
+        make > /dev/null
+        mv nasm "$SCRIPT_DIR/bin/linux/nasm"
+        cd "$SCRIPT_DIR" || exit
+        rm -rf nasm-2.16.01 nasm.tar.xz
     fi
-    ok "Portable nasm downloaded into $SCRIPT_DIR/bin/linux/nasm"
+    ok "Portable nasm compiled locally into $SCRIPT_DIR/bin/linux/nasm"
 fi
 
 chmod +x trisynth

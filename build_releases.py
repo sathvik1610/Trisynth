@@ -42,7 +42,7 @@ def main():
     print("----------------------------")
     # Common shared docs and tests
     common_files = [
-        "INSTALL.md",
+        "docs",
         "tests/demo1_dead_code.tri",
         "tests/demo2_strength_reduction.tri",
         "tests/demo4_array.tri"

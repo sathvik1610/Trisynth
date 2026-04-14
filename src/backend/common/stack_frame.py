@@ -1,52 +1,48 @@
+# This file manages the memory stack frame during execution, making sure all the variables and temporary values are stored at the right offsets.
+
 from typing import Dict, List
 
 class StackFrame:
-    """
-    Manages stack allocation for a single function.
-    Architecture-agnostic.
-    
-    Layout:
-    Base Pointer -> [Previous FP]
-    + Offset     -> [Return Address/Params]
-    - Offset     -> [Locals/Temporaries]
-    
-    Slot size is configurable (default 8 bytes).
-    Total size is aligned to 16 bytes by default (common ABI requirement).
-    """
+
+       
     def __init__(self):
+        # This initializes the base properties.
         self.offsets: Dict[str, int] = {}
-        self.is_ref: Dict[str, bool] = {} # True if the variable is a pointer/reference to an array
-        self.current_offset = 0 # Grows downwards
+        self.is_ref: Dict[str, bool] = {}                                                          
+        self.current_offset = 0                  
         self.total_size = 0
 
     def allocate(self, var_name: str, size: int = 8, is_ref: bool = False):
-        """
-        Allocate a slot for a variable.
-        Size is in bytes (default 8 bytes).
-        """
+
+           
+        # This handles the primary logic for allocate operations.
         if var_name in self.offsets:
-            return # Already allocated
+            return                    
             
         self.current_offset += size
         self.offsets[var_name] = self.current_offset
         self.is_ref[var_name] = is_ref
 
     def get_offset(self, var_name: str) -> int:
-        """Returns the offset from any Base Pointer (e.g. 8 means [FP - 8])."""
+                                                                               
+        # This handles the primary logic for get offset operations.
         if var_name not in self.offsets:
-            # Auto-allocate if not found (Lazy allocation for temp vars)
+                                                                        
             self.allocate(var_name)
         return self.offsets[var_name]
 
     def is_reference(self, var_name: str) -> bool:
-        """Returns True if the variable is a reference/pointer."""
+                                                                  
+        # This handles the primary logic for is reference operations.
         return self.is_ref.get(var_name, False)
 
     def finalize(self):
-        """Align frame size to 16 bytes."""
+                                           
+        # This handles the primary logic for finalize operations.
         self.total_size = self._align_16(self.current_offset)
 
     def _align_16(self, size: int) -> int:
+        # This handles the primary logic for align 16 operations.
         if size % 16 == 0:
             return size
         return size + (16 - (size % 16))

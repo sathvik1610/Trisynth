@@ -1,23 +1,15 @@
+# This translates intermediate operations specifically into RISC-V native assembly.
+
 from typing import List
 from src.ir.instructions import Instruction, OpCode
 from src.backend.common.stack_frame import StackFrame
 
 
 class RISCVGenerator:
-    """
-    Generates RISC-V 64-bit Assembly (GNU AS) from IR.
-    Strategy: Stack Machine (No register allocation).
-    Calling Convention: Stack-based (mirrors x86 backend).
 
-    Frame Layout (after prologue):
-        s0 = frame pointer
-        Locals at -(offset)(s0), offset from StackFrame starting at 8
-        s0_saved at  0(s0)         [= locals_size(sp)]
-        ra_saved  at +8(s0)        [= locals_size+8(sp)]
-        args from caller at +16(s0), +24(s0), ...
-    """
 
     def __init__(self):
+        # This initializes the base properties.
         self.output: List[str] = []
         self.current_frame = None
         self._pending_params = []
@@ -26,6 +18,7 @@ class RISCVGenerator:
         self.strings = []
 
     def generate(self, instructions: List[Instruction]) -> str:
+        # This takes the parsed data and spits out the actual generated implementation.
         self.strings = []
         for instr in instructions:
             if instr.opcode == OpCode.LOAD_STR:
@@ -53,10 +46,11 @@ class RISCVGenerator:
         return "\n".join(self.output)
 
     def _compile_function(self, instrs: List[Instruction]):
+        # This handles the primary logic for compile function operations.
         func_name = instrs[0].arg1
         self._current_func_name = func_name
 
-        # 1. Analyze Frame
+                          
         frame = StackFrame()
         for instr in instrs:
             if instr.opcode == OpCode.ARR_DECL:
@@ -69,29 +63,29 @@ class RISCVGenerator:
         frame.finalize()
         self.current_frame = frame
 
-        # locals_size: space for local variables (16-byte aligned)
+                                                                  
         locals_size = frame.total_size
-        locals_size = (locals_size + 15) & ~15   # align up
+        locals_size = (locals_size + 15) & ~15             
         if locals_size == 0:
-            locals_size = 16                      # always reserve at least 16 for s0/ra
+            locals_size = 16                                                            
 
         self._frame_locals_size = locals_size
-        frame_size = locals_size + 16             # +16 for saved ra + s0
+        frame_size = locals_size + 16                                    
 
-        # 2. Emit Prologue
+                          
         self._emit(f"# --- Function {func_name} ---")
         self._emit(f".globl {func_name}")
         self._emit(f"{func_name}:")
         self._emit(f"    addi sp, sp, -{frame_size}")
-        self._emit(f"    sd   ra, {locals_size + 8}(sp)")   # ra  at [s0 + 8]
-        self._emit(f"    sd   s0, {locals_size}(sp)")        # s0  at [s0 + 0]
-        self._emit(f"    addi s0, sp, {locals_size}")         # s0 = frame pointer
+        self._emit(f"    sd   ra, {locals_size + 8}(sp)")                    
+        self._emit(f"    sd   s0, {locals_size}(sp)")                         
+        self._emit(f"    addi s0, sp, {locals_size}")                             
 
-        # 3. Emit Body
+                      
         for instr in instrs[1:-1]:
             self._emit_instruction(instr)
 
-        # 4. Emit Epilogue (also jumped to by RETURN)
+                                                     
         self._emit(f".exit_{func_name}:")
         self._emit(f"    ld   ra, {locals_size + 8}(sp)")
         self._emit(f"    ld   s0, {locals_size}(sp)")
@@ -99,6 +93,7 @@ class RISCVGenerator:
         self._emit("    ret")
 
     def _emit_instruction(self, instr: Instruction):
+        # This handles the primary logic for emit instruction operations.
         self._emit(f"    # {instr}")
 
         if instr.opcode == OpCode.MOV:
@@ -163,7 +158,7 @@ class RISCVGenerator:
             self._store_t0(instr.result)
 
         elif instr.opcode == OpCode.LT:
-            # t0 = (arg1 < arg2)
+                                
             self._load_to_t0(instr.arg1)
             self._emit("    mv   t1, t0")
             self._load_to_t0(instr.arg2)
@@ -171,15 +166,15 @@ class RISCVGenerator:
             self._store_t0(instr.result)
 
         elif instr.opcode == OpCode.GT:
-            # t0 = (arg1 > arg2)  ===  (arg2 < arg1)
+                                                    
             self._load_to_t0(instr.arg1)
             self._emit("    mv   t1, t0")
             self._load_to_t0(instr.arg2)
-            self._emit("    slt  t0, t0, t1")   # swap operands
+            self._emit("    slt  t0, t0, t1")                  
             self._store_t0(instr.result)
 
         elif instr.opcode == OpCode.EQ:
-            # t0 = (arg1 == arg2)  ===  seqz(arg1 - arg2)
+                                                         
             self._load_to_t0(instr.arg1)
             self._emit("    mv   t1, t0")
             self._load_to_t0(instr.arg2)
@@ -188,7 +183,7 @@ class RISCVGenerator:
             self._store_t0(instr.result)
 
         elif instr.opcode == OpCode.NEQ:
-            # t0 = (arg1 != arg2)  ===  snez(arg1 - arg2)
+                                                         
             self._load_to_t0(instr.arg1)
             self._emit("    mv   t1, t0")
             self._load_to_t0(instr.arg2)
@@ -197,26 +192,26 @@ class RISCVGenerator:
             self._store_t0(instr.result)
 
         elif instr.opcode == OpCode.LTE:
-            # a <= b  ===  !(b < a)
+                                   
             self._load_to_t0(instr.arg1)
             self._emit("    mv   t1, t0")
             self._load_to_t0(instr.arg2)
-            self._emit("    slt  t0, t0, t1")    # t0 = (b < a)
-            self._emit("    xori t0, t0, 1")      # t0 = !(b < a)
+            self._emit("    slt  t0, t0, t1")                  
+            self._emit("    xori t0, t0, 1")                     
             self._store_t0(instr.result)
 
         elif instr.opcode == OpCode.GTE:
-            # a >= b  ===  !(a < b)
+                                   
             self._load_to_t0(instr.arg1)
             self._emit("    mv   t1, t0")
             self._load_to_t0(instr.arg2)
-            self._emit("    slt  t0, t1, t0")    # t0 = (a < b)
-            self._emit("    xori t0, t0, 1")      # t0 = !(a < b)
+            self._emit("    slt  t0, t1, t0")                  
+            self._emit("    xori t0, t0, 1")                     
             self._store_t0(instr.result)
 
         elif instr.opcode == OpCode.PRINT:
-            # printf("%ld\n", val)
-            # a0 = fmt ptr, a1 = value
+                                  
+                                      
             self._load_to_t0(instr.arg1)
             self._emit("    mv   a1, t0")
             self._emit("    la   a0, fmt_int")
@@ -249,27 +244,27 @@ class RISCVGenerator:
             self._load_to_t0(instr.arg1)
             self._emit(f"    beqz t0, {instr.arg2}")
 
-        # --- Arrays ---
+                        
         elif instr.opcode == OpCode.ARR_DECL:
-            pass  # handled in frame analysis
+            pass                             
 
         elif instr.opcode == OpCode.ALOAD:
-            self._load_to_t0(instr.arg2)            # t0 = index
-            self._emit("    slli t0, t0, 3")         # t0 = index * 8
+            self._load_to_t0(instr.arg2)                        
+            self._emit("    slli t0, t0, 3")                         
 
             arr_base = self.current_frame.get_offset(instr.arg1)
             if self.current_frame.is_reference(instr.arg1):
-                self._emit(f"    ld   t1, -{arr_base}(s0)")  # t1 = base ptr
+                self._emit(f"    ld   t1, -{arr_base}(s0)")                 
             else:
-                self._emit(f"    addi t1, s0, -{arr_base}")  # t1 = base addr
+                self._emit(f"    addi t1, s0, -{arr_base}")                  
 
-            self._emit("    add  t1, t1, t0")        # t1 = element address
-            self._emit("    ld   t0, 0(t1)")          # t0 = element value
+            self._emit("    add  t1, t1, t0")                              
+            self._emit("    ld   t0, 0(t1)")                              
             self._store_t0(instr.result)
 
         elif instr.opcode == OpCode.ASTORE:
-            self._load_to_t0(instr.arg2)             # t0 = index
-            self._emit("    slli t0, t0, 3")          # t0 = index * 8
+            self._load_to_t0(instr.arg2)                         
+            self._emit("    slli t0, t0, 3")                          
 
             arr_base = self.current_frame.get_offset(instr.arg1)
             if self.current_frame.is_reference(instr.arg1):
@@ -277,13 +272,13 @@ class RISCVGenerator:
             else:
                 self._emit(f"    addi t1, s0, -{arr_base}")
 
-            self._emit("    add  t1, t1, t0")         # t1 = element address
-            self._emit("    mv   t2, t1")              # save address in t2
+            self._emit("    add  t1, t1, t0")                               
+            self._emit("    mv   t2, t1")                                  
 
-            self._load_to_t0(instr.result)             # t0 = value to store
+            self._load_to_t0(instr.result)                                  
             self._emit("    sd   t0, 0(t2)")
 
-        # --- Functions ---
+                           
         elif instr.opcode == OpCode.PARAM:
             self._pending_params.append((instr.arg1, False))
 
@@ -297,7 +292,7 @@ class RISCVGenerator:
             args_to_push = self._pending_params[-num_args:]
             self._pending_params = self._pending_params[:-num_args]
 
-            # Push args right-to-left (mirrors x86 convention)
+                                                              
             for arg, is_ref in reversed(args_to_push):
                 if is_ref:
                     arr_base = self.current_frame.get_offset(arg)
@@ -312,20 +307,20 @@ class RISCVGenerator:
 
             self._emit(f"    call {func_name}")
 
-            # Cleanup args
+                          
             if num_args > 0:
                 self._emit(f"    addi sp, sp, {num_args * 8}")
 
-            # Return value is in a0
+                                   
             if instr.result:
                 self._emit("    mv   t0, a0")
                 self._store_t0(instr.result)
 
         elif instr.opcode == OpCode.LOAD_PARAM:
-            # At callee entry (before prologue): sp → [arg0, arg1, ...]
-            # After prologue: s0 = sp_entry - 16 (overhead)
-            # => sp_entry = s0 + 16
-            # arg_idx at sp_entry + idx*8 = s0 + 16 + idx*8
+                                                                       
+                                                           
+                                   
+                                                           
             idx = instr.arg1
             offset = 16 + idx * 8
             self._emit(f"    ld   t0, {offset}(s0)")
@@ -338,7 +333,8 @@ class RISCVGenerator:
             self._store_t0(instr.result)
 
     def _load_to_t0(self, arg):
-        """Load arg (immediate int or variable name) into t0."""
+                                                                
+        # This handles the primary logic for load to t0 operations.
         if isinstance(arg, int):
             self._emit(f"    li   t0, {arg}")
         elif isinstance(arg, str):
@@ -348,16 +344,19 @@ class RISCVGenerator:
             raise Exception(f"RISCVGen: Unknown arg type: {type(arg)} = {arg}")
 
     def _store_t0(self, dest_var, src_reg="t0"):
-        """Store src_reg into the stack slot of dest_var."""
+                                                            
+        # This handles the primary logic for store t0 operations.
         if dest_var is None:
             return
         offset = self.current_frame.get_offset(dest_var)
         self._emit(f"    sd   {src_reg}, -{offset}(s0)")
 
     def _emit(self, line: str):
+        # This handles the primary logic for emit operations.
         self.output.append(line)
 
     def _emit_header(self):
+        # This handles the primary logic for emit header operations.
         self.output.append(".section .data")
         self.output.append('fmt_int: .string "%ld\\n"')
         self.output.append('fmt_str: .string "%s"')
@@ -383,4 +382,5 @@ class RISCVGenerator:
         self.output.append("")
 
     def _emit_footer(self):
-        self._emit("")  # trailing newline — fixes "end of file not at end of a line" warning
+        # This handles the primary logic for emit footer operations.
+        self._emit("")                                                                       

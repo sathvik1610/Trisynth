@@ -1,3 +1,5 @@
+# This file serves as the main execution entry point for the compiler. This grabs the user arguments and run the whole pipeline from text to executable here.
+
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -7,7 +9,8 @@ from src.frontend.lexer import Lexer
 from src.frontend.parser import Parser
 
 def main():
-    # cli entry
+               
+    # This is the primary entrypoint where we tie everything together.
     parser = argparse.ArgumentParser(description="Trisynth Native Compiler")
     parser.add_argument('file', nargs='?', help="Source file to compile (.tri)")
     parser.add_argument('--demo', action='store_true', help="Run in interactive demo mode")
@@ -33,6 +36,7 @@ def main():
         compile_file(args.file, args)
 
 def run_demo(args):
+    # This launches the interactive demo mode directly in the console.
     print("Trisynth Compiler Interactive Mode")
     print("----------------------------------")
     print("Type your code below (press Ctrl+D on Linux/Mac or Ctrl+Z then Enter on Windows to finish):")
@@ -44,7 +48,8 @@ def run_demo(args):
         return
 
 def compile_file(filepath, args):
-    # read source and kick off compilation
+                                          
+    # This lakes a file path and pushes it through the compiler pipeline.
     try:
         with open(filepath, 'r') as f:
             source_code = f.read()
@@ -55,11 +60,13 @@ def compile_file(filepath, args):
         print(f"Error: {e}")
 
 class ASTPrinter:
-    # helper to print ast nicely
+                                
     def __init__(self):
+        # This initializes the base properties.
         self.output = []
 
     def print_tree(self, node, prefix="", is_last=True):
+        # This handles the primary logic for print tree operations.
         if not node:
             return
 
@@ -139,13 +146,15 @@ class ASTPrinter:
             self.print_tree(child, new_prefix, i == len(children) - 1)
 
     def format(self, root_node):
+        # This handles the primary logic for format operations.
         self.output = []
         self.print_tree(root_node, "", True)
         return "\n".join(self.output)
 
 class IRInterpreter:
-    # stack-based interpreter for trisynth ir.
+                                              
     def __init__(self, ir):
+        # This initializes the base properties.
         self.ir = ir
         self.locals: "dict" = {}
         self.arrays: "dict" = {}
@@ -164,6 +173,7 @@ class IRInterpreter:
                 self.labels[instr.arg1] = i
                 
     def run(self, main_func="main"):
+        # This kicks off the main execution loop for this component.
         if main_func not in self.functions:
             print(f"Error: Function '{main_func}' not found.")
             return
@@ -302,7 +312,8 @@ class IRInterpreter:
             self.pc += 1
 
 def _resolve_toolchain():
-    # figure out whether we're on win native, wsl, or linux
+                                                           
+    # This handles the primary logic for resolve toolchain operations.
     import platform
     import shutil
     import subprocess
@@ -353,6 +364,7 @@ def _resolve_toolchain():
 
 
 def _toolchain_install_hint():
+    # This handles the primary logic for toolchain install hint operations.
     import platform
     system = platform.system()
     if system == "Windows":
@@ -368,7 +380,8 @@ def _toolchain_install_hint():
 
 
 def process_source(source_code, args):
-    # run all compiler phases
+                             
+    # This handles the primary logic for process source operations.
     import time
     start_time = time.time()
     
@@ -413,7 +426,7 @@ def process_source(source_code, args):
         analyzer.analyze(ast)
         if verbose:
             print("\n[3] Semantic Analysis:")
-            print("  ✅ Passed (No semantic errors)")
+            print("   Passed (No semantic errors)")
             print("\n  --- Global Symbol Table ---")
             print("  Name             | Type             | Category   ")
             print("  -----------------+------------------+------------")
@@ -421,7 +434,7 @@ def process_source(source_code, args):
             for name, sym in global_scope.items():
                  print(f"  {name:<16} | {sym.type_name:<16} | {sym.category}")
     except Exception as e:
-        print(f"  ❌ Failed: {e}")
+        print(f"   Failed: {e}")
         return
 
     from src.ir.ir_gen import IRGenerator
@@ -433,7 +446,7 @@ def process_source(source_code, args):
             for instr in ir:
                 print(f"  {instr}")
     except Exception as e:
-        print(f"  ❌ Failed: {e}")
+        print(f"   Failed: {e}")
         return
 
     from src.optimization.constant_fold import ConstantFolding
@@ -468,14 +481,14 @@ def process_source(source_code, args):
                     for instr in current_ir:
                         print(f"    {instr}")
         if verbose or args.ir:
-            print("\n  ✅ Optimization Complete")
+            print("\n   Optimization Complete")
             if args.ir: return
     except Exception as e:
-        print(f"  ❌ Failed: {e}")
+        print(f"   Failed: {e}")
         return
 
     from src.backend.codegen_x86 import X86Generator
-    from src.backend.codegen_riscv import RISCVGenerator
+    from src.backend.riscv.codegen_riscv import RISCVGenerator
     
     x86_gen = X86Generator()
     asm_code = x86_gen.generate(current_ir)
@@ -509,7 +522,7 @@ def process_source(source_code, args):
         tc = _resolve_toolchain()
 
         if tc is None:
-            print("  ❌ No assembler toolchain found.")
+            print("   No assembler toolchain found.")
             print(_toolchain_install_hint())
             return
 
@@ -553,13 +566,13 @@ def process_source(source_code, args):
                 rv_elapsed = (time.time() - rv_start) * 1000
                 print(f"\n[X86-64 NATIVE EXECUTION]\n{res_x86.stdout}")
                 print(f"[RISC-V QEMU EXECUTION]\n{res_rv.stdout}")
-                print(f"\n  ✅ Benchmarking Complete")
-                print(f"  ⚡ x86-64{tag}: {x86_elapsed:.2f} ms")
-                print(f"  🔍 RISC-V QEMU Emulation: {rv_elapsed:.2f} ms")
+                print(f"\n   Benchmarking Complete")
+                print(f"  x86-64{tag}: {x86_elapsed:.2f} ms")
+                print(f"   RISC-V QEMU Emulation: {rv_elapsed:.2f} ms")
             else:
                 print(f"\n[X86-64 NATIVE EXECUTION]\n{res_x86.stdout}")
-                print(f"\n  ✅ X86-64 Benchmark Complete")
-                print(f"  ⚡ x86-64{tag}: {x86_elapsed:.2f} ms")
+                print(f"\n   X86-64 Benchmark Complete")
+                print(f"  x86-64{tag}: {x86_elapsed:.2f} ms")
 
         else:
             if verbose: print("  [Invoking Native Assembler & Linker...]")
@@ -583,11 +596,11 @@ def process_source(source_code, args):
             end_time = time.time()
             elapsed = (end_time - start_time) * 1000
             if verbose:
-                print(f"\n  ✅ Native Hardware Execution Complete")
-                print(f"  ⚡ Trisynth natively assembled & executed{tc['tag']} in {elapsed:.2f} ms")
+                print(f"\n   Native Hardware Execution Complete")
+                print(f"  Trisynth natively assembled & executed{tc['tag']} in {elapsed:.2f} ms")
 
     except Exception as e:
-        print(f"  ❌ Failed: {e}")
+        print(f"  Failed: {e}")
 
 if __name__ == "__main__":
     main()

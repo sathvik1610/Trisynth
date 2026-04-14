@@ -1,311 +1,360 @@
+# This defines all structural building blocks for the abstract syntax tree.
+
 from abc import ABC, abstractmethod
 from typing import List, Optional, Union
 from src.frontend.token_type import TokenType
 
 class ASTNode(ABC):
-    """
-    Abstract base class for all Abstract Syntax Tree (AST) nodes.
-    
-    Each node represents a construct in the source language.
-    """
+\
+\
+\
+\
+       
     @abstractmethod
     def __repr__(self) -> str:
-        """
-        Returns a string representation of the node for debugging.
-        """
+\
+\
+           
+        # This handles the primary logic for repr operations.
         pass
 
-# --- Expressions ---
+                     
 
 class Expr(ASTNode):
-    """Base class for all expression nodes (constructs that evaluate to a value)."""
+                                                                                    
     pass
 
 class Literal(Expr):
-    """
-    Represents a literal value (integer, float, boolean, etc.).
-    Example: 10, 3.14, true
-    """
+\
+\
+\
+       
     def __init__(self, value, type_name: str):
+        # This initializes the base properties.
         self.value = value
-        self.type_name = type_name # 'int', 'float', 'bool'
+        self.type_name = type_name                         
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Literal({self.value}:{self.type_name})"
 
 class StringLiteral(Expr):
-    """
-    Represents a string literal value.
-    Example: "Hello World"
-    """
+\
+\
+\
+       
     def __init__(self, value: str):
+        # This initializes the base properties.
         self.value = value
         self.type_name = "string"
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"StringLiteral(\"{self.value}\")"
 
 class Variable(Expr):
-    """
-    Represents a variable access.
-    Example: x, myVar
-    """
+\
+\
+\
+       
     def __init__(self, name: str):
+        # This initializes the base properties.
         self.name = name
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Var({self.name})"
 
 class ArrayAccess(Expr):
-    """
-    Represents an array element access.
-    Example: x[i]
-    """
+\
+\
+\
+       
     def __init__(self, name: str, index: Expr):
+        # This initializes the base properties.
         self.name = name
         self.index = index
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"ArrayAccess({self.name}[{self.index}])"
 
 class BinaryExpr(Expr):
-    """
-    Represents a binary operation.
-    Example: a + b, x > 10
-    """
+\
+\
+\
+       
     def __init__(self, left: Expr, operator: TokenType, right: Expr):
+        # This initializes the base properties.
         self.left = left
         self.operator = operator
         self.right = right
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Binary({self.left} {self.operator.name} {self.right})"
 
 class UnaryExpr(Expr):
-    """
-    Represents a unary operation.
-    Example: -x, !flag
-    """
+\
+\
+\
+       
     def __init__(self, operator: TokenType, operand: Expr):
+        # This initializes the base properties.
         self.operator = operator
         self.operand = operand
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Unary({self.operator.name} {self.operand})"
 
 class LogicalExpr(Expr):
-    """
-    Represents a logical operation (&&, ||).
-    Example: a && b
-    """
+\
+\
+\
+       
     def __init__(self, left: Expr, operator: TokenType, right: Expr):
+        # This initializes the base properties.
         self.left = left
         self.operator = operator
         self.right = right
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Logic({self.left} {self.operator.name} {self.right})"
 
 class Assignment(Expr):
-    """
-    Represents a variable assignment. 
-    Note: In C-like languages, assignment is often an expression.
-    Example: x = 10
-    """
+\
+\
+\
+\
+       
     def __init__(self, name: str, value: Expr):
+        # This initializes the base properties.
         self.name = name
         self.value = value
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Assign({self.name} = {self.value})"
 
 class ArrayAssignment(Expr):
-    """
-    Represents an array element assignment.
-    Example: x[i] = 10
-    """
+\
+\
+\
+       
     def __init__(self, name: str, index: Expr, value: Expr):
+        # This initializes the base properties.
         self.name = name
         self.index = index
         self.value = value
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"ArrayAssign({self.name}[{self.index}] = {self.value})"
 
 class CallExpr(Expr):
-    """
-    Represents a function call.
-    Example: print(x), foo(1, 2)
-    """
+\
+\
+\
+       
     def __init__(self, callee: str, args: List[Expr]):
+        # This initializes the base properties.
         self.callee = callee
         self.args = args
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Call({self.callee}, args={self.args})"
 
-# --- Statements ---
+                    
 
 class Stmt(ASTNode):
-    """Base class for all statement nodes (constructs that perform an action)."""
+                                                                                 
     pass
 
 class ExprStmt(Stmt):
-    """
-    Represents an expression used as a statement.
-    Example: print(x);, x = 10;
-    """
+\
+\
+\
+       
     def __init__(self, expression: Expr):
+        # This initializes the base properties.
         self.expression = expression
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"ExprStmt({self.expression})"
 
 class PrintStmt(Stmt):
-    """
-    Represents a print statement.
-    Example: print(x);
-    """
+\
+\
+\
+       
     def __init__(self, expression: Expr):
+        # This initializes the base properties.
         self.expression = expression
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Print({self.expression})"
 
 class VarDecl(Stmt):
-    """
-    Represents a variable declaration.
-    Example: int x = 10; or const int x = 10;
-    """
+\
+\
+\
+       
     def __init__(self, type_name: str, name: str, initializer: Optional[Expr], is_const: bool = False):
+        # This initializes the base properties.
         self.type_name = type_name
         self.name = name
         self.initializer = initializer
         self.is_const = is_const
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         init_str = f" = {self.initializer}" if self.initializer else ""
         const_str = "const " if self.is_const else ""
         return f"VarDecl({const_str}{self.type_name} {self.name}{init_str})"
 
 class Block(Stmt):
-    """
-    Represents a block of statements (scope).
-    Example: { int x = 1; x = x + 1; }
-    """
+\
+\
+\
+       
     def __init__(self, statements: List[Stmt]):
+        # This initializes the base properties.
         self.statements = statements
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Block(count={len(self.statements)})"
 
 class IfStmt(Stmt):
-    """
-    Represents an if-else conditional statement.
-    Example: if (x > 0) { ... } else { ... }
-    """
+\
+\
+\
+       
     def __init__(self, condition: Expr, then_branch: Stmt, else_branch: Optional[Stmt] = None):
+        # This initializes the base properties.
         self.condition = condition
         self.then_branch = then_branch
         self.else_branch = else_branch
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         else_str = " else ..." if self.else_branch else ""
         return f"If({self.condition} then ...{else_str})"
 
 class WhileStmt(Stmt):
-    """
-    Represents a while loop.
-    Example: while (x > 0) { ... }
-    """
+\
+\
+\
+       
     def __init__(self, condition: Expr, body: Stmt):
+        # This initializes the base properties.
         self.condition = condition
         self.body = body
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"While({self.condition} ...)"
 
 class WhileStmt(Stmt):
-    """
-    Represents a while loop.
-    Example: while (x > 0) { ... }
-    """
+\
+\
+\
+       
     def __init__(self, condition: Expr, body: Stmt):
+        # This initializes the base properties.
         self.condition = condition
         self.body = body
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"While({self.condition} ...)"
 
 class ForStmt(Stmt):
-    """
-    Represents a for loop.
-    Example: for (init; cond; update) { ... }
-    """
+\
+\
+\
+       
     def __init__(self, init: Optional[Stmt], condition: Optional[Expr], update: Optional[Expr], body: Stmt):
+        # This initializes the base properties.
         self.init = init
         self.condition = condition
         self.update = update
         self.body = body
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"For(init={self.init}, cond={self.condition}, upd={self.update} ...)"
 
 class BreakStmt(Stmt):
+                        # This handles the primary logic for repr operations.
     def __repr__(self): return "Break"
 
 class ContinueStmt(Stmt):
+                        # This handles the primary logic for repr operations.
     def __repr__(self): return "Continue"
 
 class ReturnStmt(Stmt):
-    """
-    Represents a return statement.
-    Example: return 0;
-    """
+\
+\
+\
+       
     def __init__(self, value: Optional[Expr]):
+        # This initializes the base properties.
         self.value = value
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Return({self.value})"
 
 class ArrayDecl(Stmt):
-    """
-    Represents an array declaration.
-    Example: int x[10];
-    """
+\
+\
+\
+       
     def __init__(self, type_name: str, name: str, size: int):
+        # This initializes the base properties.
         self.type_name = type_name
         self.name = name
         self.size = size
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"ArrayDecl({self.type_name} {self.name}[{self.size}])"
 
 class FunctionDecl(Stmt):
-    """
-    Represents a function declaration.
-    Example: int add(int a, int b) { return a + b; }
-    """
+\
+\
+\
+       
     def __init__(self, return_type: str, name: str, params: List[tuple[str, str]], body: Block):
-        """
-        params is a list of (type_name, param_name) tuples.
-        """
+\
+\
+           
+        # This initializes the base properties.
         self.return_type = return_type
         self.name = name
         self.params = params
         self.body = body
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         params_str = ", ".join([f"{t} {n}" for t, n in self.params])
         return f"Func({self.return_type} {self.name}({params_str}))"
 
 class Program(ASTNode):
-    """
-    Represents the entire program (root node).
-    Contains a list of global declarations (functions, variables).
-    """
+\
+\
+\
+       
     def __init__(self, declarations: List[Stmt]):
+        # This initializes the base properties.
         self.declarations = declarations
 
     def __repr__(self):
+        # This handles the primary logic for repr operations.
         return f"Program(decls={len(self.declarations)})"

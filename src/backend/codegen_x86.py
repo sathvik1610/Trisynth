@@ -1,24 +1,24 @@
+# This translates intermediate code directly into x86 assembly instructions.
+
 from typing import List
 from src.ir.instructions import Instruction, OpCode
 from src.backend.common.stack_frame import StackFrame
 
 
 class X86Generator:
-    """
-    Generates x86-64 Assembly (NASM) from IR.
-    Strategy: Stack Machine (No register allocation).
-    """
 
     def __init__(self):
+        # This initializes the base properties.
         self.output: List[str] = []
         self.current_frame = None
-        self._pending_params = []  # Buffer for PARAM instructions
+        self._pending_params = []                                 
 
-        # Strings data section
+                              
         self.strings = []
 
     def generate(self, instructions: List[Instruction]) -> str:
-        # Pre-pass: Collect all string literals to build the .data section
+                                                                          
+        # This takes the parsed data and spits out the actual generated implementation.
         self.strings = []
         for instr in instructions:
             if instr.opcode == OpCode.LOAD_STR:
@@ -48,9 +48,10 @@ class X86Generator:
         return "\n".join(self.output)
 
     def _compile_function(self, instrs: List[Instruction]):
+        # This handles the primary logic for compile function operations.
         func_name = instrs[0].arg1
 
-        # 1. Analyze Frame
+                          
         frame = StackFrame()
         for instr in instrs:
             if instr.opcode == OpCode.ARR_DECL:
@@ -63,7 +64,7 @@ class X86Generator:
         frame.finalize()
         self.current_frame = frame
 
-        # 2. Emit Prologue
+                          
         self._emit(f"; --- Function {func_name} ---")
         self._emit(f"global {func_name}")
         self._emit(f"{func_name}:")
@@ -72,17 +73,18 @@ class X86Generator:
         if frame.total_size > 0:
             self._emit(f"    sub rsp, {frame.total_size}")
 
-        # 3. Emit Body
-        for i in range(1, len(instrs) - 1):  # Skip FUNC_START/END
+                      
+        for i in range(1, len(instrs) - 1):                       
             self._emit_instruction(instrs[i])
 
-        # 4. Emit Epilogue
+                          
         self._emit(f".exit_{func_name}:")
         self._emit("    mov rsp, rbp")
         self._emit("    pop rbp")
         self._emit("    ret")
 
     def _emit_instruction(self, instr: Instruction):
+        # This handles the primary logic for emit instruction operations.
         self._emit(f"    ; {instr}")
 
         if instr.opcode == OpCode.MOV:
@@ -142,7 +144,7 @@ class X86Generator:
             else:
                 src_count = self._resolve_operand(count)
                 self._emit(f"    mov rcx, {src_count}")
-                self._emit("    shl rax, cl")   # FIX: was "shl rax, cls" (typo)
+                self._emit("    shl rax, cl")                                   
             self._store_rax(instr.result)
 
         elif instr.opcode == OpCode.RSHIFT:
@@ -174,20 +176,20 @@ class X86Generator:
             self._emit("    mov rsi, rax")
             self._emit("    lea rdi, [rel fmt_int]")
             self._emit("    xor rax, rax")
-            self._emit("    mov rbx, rsp")   # save rsp
-            self._emit("    and rsp, -16")   # align
+            self._emit("    mov rbx, rsp")             
+            self._emit("    and rsp, -16")          
             self._emit("    call printf")
-            self._emit("    mov rsp, rbx")   # restore rsp
+            self._emit("    mov rsp, rbx")                
 
         elif instr.opcode == OpCode.PRINT_STR:
             self._load_to_rax(instr.arg1)
             self._emit("    mov rsi, rax")
             self._emit("    lea rdi, [rel fmt_str]")
             self._emit("    xor rax, rax")
-            self._emit("    mov rbx, rsp")   # save rsp
-            self._emit("    and rsp, -16")   # align
+            self._emit("    mov rbx, rsp")             
+            self._emit("    and rsp, -16")          
             self._emit("    call printf")
-            self._emit("    mov rsp, rbx")   # restore rsp
+            self._emit("    mov rsp, rbx")                
 
         elif instr.opcode == OpCode.LOAD_STR:
             idx = self.strings.index(instr.arg1)
@@ -212,15 +214,15 @@ class X86Generator:
             self._emit("    cmp rax, 0")
             self._emit(f"    je {instr.arg2}")
 
-        # --- Memory / Arrays ---
+                                 
         elif instr.opcode == OpCode.ARR_DECL:
-            pass  # Already handled in frame analysis
+            pass                                     
 
         elif instr.opcode == OpCode.ALOAD:
             idx_val = instr.arg2
 
-            self._load_to_rax(idx_val)          # RAX = index
-            self._emit("    imul rax, 8")        # Scale by 8 bytes
+            self._load_to_rax(idx_val)                       
+            self._emit("    imul rax, 8")                          
 
             arr_base = self.current_frame.get_offset(instr.arg1)
 
@@ -246,15 +248,15 @@ class X86Generator:
 
             self._emit("    add rcx, rax")
 
-            val = instr.result  # ASTORE reuses result field for value
+            val = instr.result                                        
 
-            self._emit(f"    push rcx")     # Save address
-            self._load_to_rax(val)          # RAX = value
-            self._emit("    mov r9, rax")   # Save value away from stack ops
-            self._emit("    pop rcx")       # Restore address
+            self._emit(f"    push rcx")                   
+            self._load_to_rax(val)                       
+            self._emit("    mov r9, rax")                                   
+            self._emit("    pop rcx")                        
             self._emit("    mov [rcx], r9")
 
-        # --- Functions ---
+                           
         elif instr.opcode == OpCode.PARAM:
             self._pending_params.append((instr.arg1, False))
 
@@ -300,6 +302,7 @@ class X86Generator:
             self._store_rax(instr.result)
 
     def _resolve_operand(self, arg):
+        # This handles the primary logic for resolve operand operations.
         if isinstance(arg, int):
             return str(arg)
         elif isinstance(arg, str):
@@ -309,21 +312,25 @@ class X86Generator:
             raise Exception(f"Unknown arg type: {arg}")
 
     def _load_to_rax(self, arg):
+        # This handles the primary logic for load to rax operations.
         src = self._resolve_operand(arg)
         self._emit(f"    mov rax, {src}")
         return "rax"
 
     def _store_rax(self, dest_var, src_reg="rax"):
-        """Stores a register (default RAX) into the stack slot of dest_var."""
-        if dest_var is None:   # FIX: guard against void/no-result instructions
+                                                                              
+        # This handles the primary logic for store rax operations.
+        if dest_var is None:                                                   
             return
         offset = self.current_frame.get_offset(dest_var)
         self._emit(f"    mov [rbp - {offset}], {src_reg}")
 
     def _emit(self, line: str):
+        # This handles the primary logic for emit operations.
         self.output.append(line)
 
     def _emit_header(self):
+        # This handles the primary logic for emit header operations.
         self.output.append("section .data")
         self.output.append('    fmt_int db "%ld", 10, 0')
         self.output.append('    fmt_str db "%s", 0')
@@ -354,5 +361,6 @@ class X86Generator:
         self.output.append("")
 
     def _emit_footer(self):
+        # This handles the primary logic for emit footer operations.
         self._emit("")
         self._emit("section .note.GNU-stack noalloc noexec nowrite progbits")

@@ -1,33 +1,38 @@
+# This acts as the coordinator that chains all of our performance optimizations together and runs them in the right sequence.
+
 from typing import List
 from src.ir.instructions import Instruction
 
 class Optimizer:
-    """
-    Driver for running optimization passes on the IR.
-    """
+\
+\
+       
     def __init__(self):
+        # This initializes the base properties.
         self.passes = []
 
     def add_pass(self, optimization_pass):
-        """Add an optimization pass to the pipeline."""
+                                                       
+        # This handles the primary logic for add pass operations.
         self.passes.append(optimization_pass)
 
     def optimize(self, instructions: List[Instruction]) -> List[Instruction]:
-        """
-        Run all registered passes on the IR instructions.
-        
-        Args:
-            instructions: The initial list of IR instructions.
-            
-        Returns:
-            The optimized list of IR instructions.
-        """
+\
+\
+\
+\
+\
+\
+\
+\
+           
+        # This handles the primary logic for optimize operations.
         optimized_ir = instructions
         
-        # We loop all passes until reaching a fixed point (IR no longer changes)
-        # This solves "post-folding cleanup" and cascaded CSE
-        for _ in range(10):  # Hard limit to prevent infinite loops
-            # To compare IR changes, we need a string representation since object IDs change
+                                                                                
+                                                             
+        for _ in range(10):                                        
+                                                                                            
             before_str = "\n".join(str(i) for i in optimized_ir)
             
             for opt_pass in self.passes:

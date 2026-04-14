@@ -1,28 +1,32 @@
+# This pass looks for slow operations like multiplication and replaces them with faster equivalents like binary shifting.
+
 from typing import List, Union
 import math
 from src.ir.instructions import Instruction, OpCode
 
 class StrengthReduction:
-    """
-    Optimization Pass: Strength Reduction
-    
-    Replaces expensive arithmetic operations with cheaper ones.
-    - MUL x, 2^k -> LSHIFT x, k
-    - DIV x, 2^k -> RSHIFT x, k
-    - MUL x, 0 -> MOV x, 0
-    - ADD x, 0 -> MOV x, x (Identity)
-    """
+\
+\
+\
+\
+\
+\
+\
+\
+       
     def run(self, instructions: List[Instruction]) -> List[Instruction]:
+        # This kicks off the main execution loop for this component.
         optimized = []
         for instr in instructions:
             reduced = self._reduce(instr)
-            # Peephole: remove self-assignments (MOV x x)
+                                                         
             if reduced.opcode == OpCode.MOV and reduced.arg1 == reduced.result:
                 continue
             optimized.append(reduced)
         return optimized
 
     def _reduce(self, instr: Instruction) -> Instruction:
+        # This handles the primary logic for reduce operations.
         if instr.opcode == OpCode.MUL:
             return self._reduce_mul(instr)
         elif instr.opcode == OpCode.DIV:
@@ -34,51 +38,54 @@ class StrengthReduction:
         return instr
 
     def _reduce_mul(self, instr: Instruction) -> Instruction:
-        # MUL dest, src1, src2
-        # Case 1: Zero
+                              
+                      
+        # This helps optimize slow mul operations into faster equivalents.
         if instr.arg1 == 0 or instr.arg2 == 0:
             return Instruction(OpCode.MOV, arg1=0, result=instr.result)
             
-        # Case 2: One (Identity)
+                                
         if instr.arg1 == 1:
             return Instruction(OpCode.MOV, arg1=instr.arg2, result=instr.result)
         if instr.arg2 == 1:
             return Instruction(OpCode.MOV, arg1=instr.arg1, result=instr.result)
 
-        # Check if either operand is power of 2
+                                               
         
-        # Case 3: src2 is constant
+                                  
         if self._is_power_of_two(instr.arg2):
             power = self._get_power(instr.arg2)
-            # MUL x, 8 -> LSHIFT x, 3
+                                     
             return Instruction(OpCode.LSHIFT, arg1=instr.arg1, arg2=power, result=instr.result)
         
-        # Case 4: src1 is constant (Commutative)
+                                                
         if self._is_power_of_two(instr.arg1):
             power = self._get_power(instr.arg1)
-            # MUL 8, x -> LSHIFT x, 3
+                                     
             return Instruction(OpCode.LSHIFT, arg1=instr.arg2, arg2=power, result=instr.result)
             
         return instr
 
     def _reduce_div(self, instr: Instruction) -> Instruction:
-        # DIV dest, src1, src2
+                              
         
-        # Identity: x / 1 -> MOV dest, x
+                                        
+        # This helps optimize slow div operations into faster equivalents.
         if instr.arg2 == 1:
             return Instruction(OpCode.MOV, arg1=instr.arg1, result=instr.result)
             
-        # Only optimizes if optimization divisor (arg2) is constant power of 2
+                                                                              
         if self._is_power_of_two(instr.arg2):
             power = self._get_power(instr.arg2)
-            # DIV x, 8 -> RSHIFT x, 3
+                                     
             return Instruction(OpCode.RSHIFT, arg1=instr.arg1, arg2=power, result=instr.result)
             
         return instr
         
     def _reduce_add(self, instr: Instruction) -> Instruction:
-        # ADD dest, src1, src2
-        # Identity: x + 0 -> MOV dest, x
+                              
+                                        
+        # This helps optimize slow add operations into faster equivalents.
         if instr.arg1 == 0:
             return Instruction(OpCode.MOV, arg1=instr.arg2, result=instr.result)
         if instr.arg2 == 0:
@@ -86,19 +93,22 @@ class StrengthReduction:
         return instr
 
     def _reduce_sub(self, instr: Instruction) -> Instruction:
-        # SUB dest, src1, src2
-        # Identity: x - 0 -> MOV dest, x
+                              
+                                        
+        # This helps optimize slow sub operations into faster equivalents.
         if instr.arg2 == 0:
             return Instruction(OpCode.MOV, arg1=instr.arg1, result=instr.result)
-        # Identity: x - x -> MOV dest, 0
+                                        
         if instr.arg1 == instr.arg2 and isinstance(instr.arg1, str):
             return Instruction(OpCode.MOV, arg1=0, result=instr.result)
         return instr
         
     def _is_power_of_two(self, val: Union[str, int, float, None]) -> bool:
+        # This handles the primary logic for is power of two operations.
         if not isinstance(val, int) or val <= 0:
             return False
         return (val & (val - 1) == 0) and val != 0
 
     def _get_power(self, val: int) -> int:
+        # This handles the primary logic for get power operations.
         return int(math.log2(val))
