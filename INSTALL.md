@@ -1,45 +1,100 @@
-# Trisynth Compiler - Installation Guide
+# Trisynth Compiler — Installation Guide
 
-The Trisynth compiler relies on perfectly standalone, isolated executables, requiring zero global Python installations.
-
-## Windows (Native)
-1. Unzip the `Trisynth-Windows-Native` folder entirely.
-2. Double-click on `setup.bat`. This will download a local, portable version of `nasm` strictly into your internal `bin/` directory, avoiding any global system conflicts.
-> **Note:** RISC-V compilation is unsupported on native Windows. For RISC-V support, use WSL instead.
-
-## Linux and WSL (Windows Subsystem for Linux)
-1. Unzip the `Trisynth` folder.
-2. Run `bash setup.sh`. Just like Windows, it checks for standard `gcc` and then safely downloads a portable local `nasm` into the `bin/` folder without requiring `sudo` or global packages.
+Trisynth ships as a **self-contained binary**. No Python installation required.
 
 ---
 
-## 🚀 Usage
+## 📦 Which release do I download?
 
-Run the compiler via the bundled binary inside the folder.
+| Your System | Download |
+|---|---|
+| Linux (Ubuntu, Debian, etc.) | `Trisynth-Linux.zip` |
+| Windows with WSL | `Trisynth-Windows-WSL.zip` |
+| Windows (native, no WSL) | `Trisynth-Windows-Native.zip` |
 
-**Windows:**
-```cmd
-.\trisynth.exe path/to/file.tri [FLAGS]
-```
+---
 
-**Linux / WSL:**
+## 🐧 Linux
+
 ```bash
-./trisynth path/to/file.tri [FLAGS]
+unzip Trisynth-Linux.zip -d ~/Trisynth
+cd ~/Trisynth
+bash setup.sh
 ```
 
-## 🚩 Available Flags
+> ⚠️ **Important:** Extract into your **home directory** (e.g. `~/Trisynth`), not a Windows-mounted path like `/mnt/c/...`.  
+> The setup script needs Linux filesystem permissions to work correctly.
 
-**Execution Modes**
-- `--arch {x86, riscv, both}`: Target architecture (Default: `x86`).
-- `--demo`: Interactive demo mode.
-- `--benchmark`: Compile, natively execute, and compare execution performance between x86 and RISC-V (QEMU emulation).
-- `--compare-asm`: Compile to both architectures and print raw assembly code side-by-side.
+What `setup.sh` does:
+- Checks for `gcc` (required for linking)
+- Uses the pre-bundled `bin/linux/nasm` assembler (no download needed)
+- Sets execute permissions on `trisynth` and `nasm`
 
-**Output & Trace Logging**
-- `-v` or `--verbose`: Print comprehensive compilation traces across all phases.
+Run your first program:
+```bash
+./trisynth demo2_strength_reduction.tri
+```
 
-**Debug Steps (Halting execution early)**
-- `--tokens`: Output lexer tokens and halt.
-- `--ast`: Output AST generation and halt.
-- `--ir`: Output Intermediate Representation and halt.
-- `--asm`: Output x86-64 assembly instructions and halt.
+---
+
+## 🪟 Windows WSL (Recommended for Windows)
+
+1. Open your **WSL terminal** (Ubuntu, Debian, etc.)
+2. Extract into your Linux home directory — **not** `/mnt/c/...`:
+
+```bash
+# From inside WSL:
+cd ~
+unzip /mnt/c/Users/<YourName>/Downloads/Trisynth-Windows-WSL.zip -d Trisynth
+cd Trisynth
+bash setup.sh
+./trisynth demo2_strength_reduction.tri
+```
+
+> ⚠️ **Do not run from `/mnt/c/...`** — Windows-mounted filesystems block the `chmod` and file permission operations that the setup needs.
+
+---
+
+## 🪟 Windows Native (No WSL)
+
+1. Unzip `Trisynth-Windows-Native.zip`
+2. Double-click `setup.bat` (or right-click → **Run as Administrator**)
+3. Run:
+
+```cmd
+trisynth.exe demo2_strength_reduction.tri
+```
+
+> ⚠️ RISC-V compilation (`--arch riscv`) is **not available** on native Windows. Use WSL for full support.
+
+---
+
+## 🚩 All Available Flags
+
+```
+./trisynth file.tri [FLAGS]
+```
+
+| Flag | Description |
+|---|---|
+| *(none)* | Compile and run (default) |
+| `-v` / `--verbose` | Print all compilation phases in detail |
+| `--tokens` | Print lexer tokens and stop |
+| `--ast` | Print Abstract Syntax Tree and stop |
+| `--ir` | Print IR + all optimization passes and stop |
+| `--asm` | Print generated x86-64 assembly and stop |
+| `--arch x86` | Target x86-64 (default) |
+| `--arch riscv` | Target RISC-V 64-bit (Linux/WSL only) |
+| `--arch both` | Compile for both architectures |
+| `--compare-asm` | Show x86-64 and RISC-V assembly side by side |
+| `--benchmark` | Compile and benchmark x86 vs RISC-V (QEMU) |
+| `--demo` | Interactive REPL mode |
+
+---
+
+## ✅ Verifying Your Installation
+
+```bash
+./trisynth demo4_array.tri
+# Expected output: numbers printed to terminal, no errors
+```

@@ -62,58 +62,59 @@ It compiles NanoC source through every classical stage — Lexing → Parsing �
 
 ## 2. Quick Start
 
-### Installation & Wrappers
-For professional ease-of-use, this project includes dynamic CLI execution wrappers allowing you to launch the compiler cleanly from anywhere on your system via the `tsyn` alias! 
+### Step 1 — Download the Right Release
 
-- Linux / Mac: `./tsyn code.tri`
-- Windows CMD: `.\tsyn code.tri`
-- Windows PowerShell: `.\tsyn code.tri`
+| Platform | Download |
+|---|---|
+| Linux | `Trisynth-Linux.zip` |
+| Windows with WSL | `Trisynth-Windows-WSL.zip` |
+| Windows (no WSL) | `Trisynth-Windows-Native.zip` |
 
-*(To make `tsyn` globally recognized on Windows, simply add this repository's folder to your `Path` Environment Variables!)*
+### Step 2 — Setup
 
-### Standard Compilation
+**Linux / WSL:**
 ```bash
-tsyn src/my_program.tri
+# ⚠️ WSL users: extract to your Linux home directory, NOT /mnt/c/...
+unzip Trisynth-Windows-WSL.zip -d ~/Trisynth
+cd ~/Trisynth
+bash setup.sh
 ```
 
-By default, the compiler is completely silent (following industry standards). It parses your file, natively executes all optimization passes dynamically, invokes native Assembler/Linker subprocesses (via `wsl` if on Windows, or natively if on Linux), and exclusively prints out the program's final `stdout` alongside a millisecond execution timer perfectly demonstrating the hardware speed!
-
-> [!CAUTION]
-> The CLI entrypoint explicitly validates extensions requiring `.tri` files natively blocking ambiguous strings imitating professional boundaries catching incorrect formats!
-
-### Professional Debugging Flags
-If you wish to debug specific translation layers or visually trace the parsing engines, you can format the execution natively using the following explicit CLI flags:
-- `--verbose` or `-v`: Dumps literally everything (Tokens, AST, Semantic Table, IR, Optimizations, Assemblies) seamlessly into your console simultaneously.
-- `--tokens`: Parses your script and halts, printing exactly the lexical tokenization maps.
-- `--ast`: Halts execution early and pretty-prints the hierarchical Abstract Syntax Tree structure.
-- `--ir`: Halts after intermediate processing and dumps the Three Address Code mappings along with all 6 optimization phase traces.
-- `--asm`: Dumps the raw generated NASM / GNU AS Assembly text strings physically into your console safely avoiding execution.
-
-### Architecture Targeting & Benchmarking
-The compiler can target dual independent CPU architectures natively bypassing intermediate abstractions natively:
-- `--arch x86` (Default): Evaluates output natively formatting AMD64 instruction subsets securely.
-- `--arch riscv`: Emits highly specialized RISC-V 64-bit GNU AS formatting dynamically.
-- `--arch both`: Outputs both codebases dynamically into local hard drive variables concurrently.
-- `--compare-asm`: Compiles architectures simultaneously, returning visual Assembly traces side-by-side natively!
-- `--benchmark`: Automatically spawns emulated environments building both AMD64 and generic QEMU RISC-V binaries, printing their execution evaluations globally demonstrating physical latency natively!
-
-### Creating a Standalone Compiler Executable
-To permanently lock this project into an agnostic software tool capable of running on computers without Python installed:
-1. Run `pip install pyinstaller` in your terminal.
-2. Execute `pyinstaller --onefile --name trisynth src/main.py`
-3. Enter the newly built `dist/` directory exporting your fully enclosed `trisynth.exe` file professionally, letting you distribute a true compiler to peers cleanly.
-
-### Interactive REPL
-```bash
-tsyn --demo
-# > Type NanoC code, press Enter twice to compile
+**Windows Native:**
+```
+Double-click setup.bat
 ```
 
-### Run the Test Suite
+### Step 3 — Compile and Run
+
+**Linux / WSL:**
 ```bash
-python -m pytest                  # 47 Deeply formatted tests natively mapping logic boundaries
-python -m pytest -v               # Verbose — shows each test name
+./trisynth demo2_strength_reduction.tri
+./trisynth demo4_array.tri
+./trisynth yourfile.tri
 ```
+
+**Windows Native:**
+```cmd
+trisynth.exe yourfile.tri
+```
+
+### Compilation Flags
+
+| Flag | Effect |
+|---|---|
+| *(none)* | Compile and run silently |
+| `-v` / `--verbose` | Print all pipeline phases |
+| `--tokens` | Print tokens and stop |
+| `--ast` | Print AST and stop |
+| `--ir` | Print IR + optimization passes and stop |
+| `--asm` | Print generated assembly and stop |
+| `--arch x86` | Target x86-64 (default) |
+| `--arch riscv` | Target RISC-V 64-bit (Linux/WSL only) |
+| `--arch both` | Compile both architectures |
+| `--compare-asm` | Show x86 and RISC-V assembly side by side |
+| `--benchmark` | Benchmark x86 vs RISC-V (QEMU) |
+| `--demo` | Interactive REPL mode |
 
 ### Sample Program
 ```c
@@ -129,6 +130,8 @@ void main() {
     print(factorial(5));   // Output: 120
 }
 ```
+
+> See `INSTALL.md` and `SETUP.md` for full platform-specific installation details.
 
 ---
 

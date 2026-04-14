@@ -542,6 +542,13 @@ def process_source(source_code, args):
             else:
                 bundled_nasm = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bin', 'linux', 'nasm'))
             nasm_exe = bundled_nasm if os.path.exists(bundled_nasm) else "nasm"
+            # Auto-fix execute permission if the bundled nasm isn't executable
+            # (happens when zip is extracted on Windows and Unix bits are stripped)
+            if nasm_exe != "nasm" and os.path.exists(nasm_exe):
+                import stat as _stat
+                current_mode = os.stat(nasm_exe).st_mode
+                if not (current_mode & _stat.S_IXUSR):
+                    os.chmod(nasm_exe, current_mode | _stat.S_IXUSR | _stat.S_IXGRP | _stat.S_IXOTH)
         else:
             nasm_exe = "nasm"
 

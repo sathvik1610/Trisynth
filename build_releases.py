@@ -36,8 +36,11 @@ def main():
     print("🚀 Building Release Packages")
     print("----------------------------")
 
-    # Common shared docs and demo files
+    # Common files included in all releases
     common_files = [
+        "README.md",
+        "INSTALL.md",
+        "SETUP.md",
         "docs",
         "tests/demo1_dead_code.tri",
         "tests/demo2_strength_reduction.tri",

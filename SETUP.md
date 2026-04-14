@@ -1,41 +1,74 @@
 # Trisynth Compiler — Setup Guide
 
-## Linux
-```bash
-bash setup.sh
-./trisynth file.tri
-```
-
-## WSL (Windows Subsystem for Linux)
-Open your WSL terminal, navigate to the project folder, then:
-```bash
-bash setup.sh
-./trisynth file.tri
-```
-WSL setup is identical to Linux and includes full RISC-V support.
-
-## Native Windows
-Double-click `setup.bat` (or right-click → Run as Administrator).
-```
-trisynth.bat file.tri
-```
-> ⚠️ RISC-V compilation (`--arch riscv`) is not available on native Windows.
-> Install WSL for full support: https://aka.ms/wslinstall
+Quick reference for getting Trisynth running on your system.
 
 ---
 
-## What setup does
-| Step | Linux / WSL | Native Windows |
-|------|------------|----------------|
-| System packages | `apt` installs nasm, gcc, riscv64 toolchain, qemu | winget installs NASM + MSYS2/MinGW |
-| Python venv | `.venv/` created | `.venv\` created |
-| Python deps | Installed from `requirements.txt` | Installed from `requirements.txt` |
-| Launcher | `./trisynth` shell script | `trisynth.bat` batch file |
+## Linux
 
-Setup scripts are **idempotent** — safe to re-run.
+```bash
+unzip Trisynth-Linux.zip -d ~/Trisynth
+cd ~/Trisynth
+bash setup.sh
+./trisynth file.tri
+```
+
+---
+
+## Windows WSL
+
+> ⚠️ **Must extract to your Linux home directory** — NOT `/mnt/c/...`
+
+```bash
+# Inside WSL terminal:
+cd ~
+unzip /mnt/c/Users/<YourName>/Downloads/Trisynth-Windows-WSL.zip -d Trisynth
+cd Trisynth
+bash setup.sh
+./trisynth file.tri
+```
+
+Full RISC-V support is available on WSL.
+
+---
+
+## Windows Native
+
+Double-click `setup.bat`, then:
+
+```cmd
+trisynth.exe file.tri
+```
+
+> ⚠️ RISC-V (`--arch riscv`) is not supported on native Windows.
+
+---
+
+## What `setup.sh` does
+
+| Step | Action |
+|---|---|
+| Check gcc | Verifies the linker is available |
+| nasm | Uses the pre-bundled `bin/linux/nasm` (no internet needed) |
+| Permissions | Runs `chmod +x` on `trisynth` and `bin/linux/nasm` |
+
+Setup is **idempotent** — safe to run multiple times.
 
 ---
 
 ## Requirements
-- **Linux / WSL**: `python3`, `sudo` apt access
-- **Windows**: Python 3.x from python.org, winget (comes with Windows 10 1709+ / 11)
+
+| Platform | Requirements |
+|---|---|
+| Linux / WSL | `gcc` (`sudo apt install build-essential`) |
+| Windows Native | None — `setup.bat` handles everything |
+
+---
+
+## Demo Files Included
+
+| File | What it demonstrates |
+|---|---|
+| `demo1_dead_code.tri` | Dead code elimination optimization |
+| `demo2_strength_reduction.tri` | Strength reduction (multiply → shift) |
+| `demo4_array.tri` | Array declaration and access |

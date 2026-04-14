@@ -50,7 +50,12 @@ else
     ok "Portable nasm compiled locally into $SCRIPT_DIR/bin/linux/nasm"
 fi
 
-chmod +x trisynth
+# Ensure the nasm binary (pre-bundled or freshly compiled) is executable
+if [ -f "$SCRIPT_DIR/bin/linux/nasm" ]; then
+    chmod +x "$SCRIPT_DIR/bin/linux/nasm"
+fi
+
+chmod +x "$SCRIPT_DIR/trisynth"
 ok "trisynth binary is ready to execute."
 
 echo ""
