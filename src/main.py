@@ -532,7 +532,13 @@ def process_source(source_code, args):
         if tc['mode'] == 'linux':
             meipass = getattr(sys, '_MEIPASS', None)
             if meipass:
-                bundled_nasm = os.path.join(meipass, 'bin', 'linux', 'nasm')
+                exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+                external_nasm = os.path.join(exe_dir, 'bin', 'linux', 'nasm')
+                internal_nasm = os.path.join(meipass, 'bin', 'linux', 'nasm')
+                if os.path.exists(external_nasm):
+                    bundled_nasm = external_nasm
+                else:
+                    bundled_nasm = internal_nasm
             else:
                 bundled_nasm = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bin', 'linux', 'nasm'))
             nasm_exe = bundled_nasm if os.path.exists(bundled_nasm) else "nasm"
