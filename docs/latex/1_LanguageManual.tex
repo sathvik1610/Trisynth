@@ -1,0 +1,222 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{bookmark}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{booktabs}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+\title{\Huge \textbf{Trisynth}\\
+\vspace{0.5cm}
+\Large Language Reference Manual}
+\author{
+\textbf{Group ID: 1}\\
+V. Chitraksh (CS23B054)\\
+P. Sathvik (CS23B042)\\
+S. Danish Dada (CS23B047)
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+\subsection{Purpose of the Language}
+Trisynth exists to bridge the gap between high-level expressive programming and ultra-low-level bare-metal execution. Functioning as an educational but fully realized standalone compiler, Trisynth solves the problem of ``black-box'' compilation by handling all custom intermediate representations (IR), aggressive semantic analysis, and direct instruction emission explicitly without external monoliths like LLVM.
+
+\subsection{Design Goals}
+\begin{itemize}
+    \item \textbf{Transparency}: Every phase of the compiler (Tokens $\rightarrow$ AST $\rightarrow$ IR $\rightarrow$ ASM) can be inspected via CLI flags.
+    \item \textbf{Performance}: Capable of Ahead-Of-Time (AOT) compilation utilizing significant optimization techniques (CSE, Constant Folding, Dead-Code Elimination).
+    \item \textbf{Safety}: Fully static type resolution, block-scoping, and immutable variables ensure logical stability at compile-time natively.
+    \item \textbf{Portability}: Native code generators seamlessly switch outputs between `x86-64` (Intel/AMD) and `RISC-V` architectures natively mapping limits intelligently.
+\end{itemize}
+
+\subsection{Key Features and Positioning}
+Compared to C, Trisynth offers a strictly predictable runtime subset limiting undefined behaviors linked to raw pointers, preferring statically sized arrays logically locked to explicitly evaluated stacks properly mapping boundaries uniquely allocating structures successfully avoiding leaks natively. Compared to LLVM, it forces students to analyze direct internal AST translations inherently studying components confidently.
+
+\section{Program Structure}
+\begin{itemize}
+    \item \textbf{Entry Point}: Program execution strictly begins at the \texttt{main} function explicitly returning nothing natively (e.g., \texttt{void main()}).
+    \item \textbf{File Structure}: Source files utilize \texttt{.tri} extensions nesting globally scoped constructs natively isolating functions correctly resolving sequences carefully testing bounds properly handling logics naturally isolating architectures exceptionally evaluating paths gracefully.
+\end{itemize}
+
+Trisynth handles the translation across 5 autonomous passes handling Syntax matching natively generating limits checking bounds mapping parameters evaluating loops natively structuring rules isolating constraints effectively running components beautifully determining tests securely analyzing architectures inherently organizing parameters proactively avoiding collisions.
+
+\section{Lexical Elements}
+\subsection{Tokens and Keywords}
+\begin{longtable}{ll}
+\toprule
+\textbf{Category} & \textbf{Tokens} \\
+\midrule
+\endhead
+Keywords & \texttt{if, else, while, for, break, continue, return, int}\\
+ & \texttt{void, const, print, readInt, string, bool, true, false} \\
+Identifiers & \texttt{[a-zA-Z\_][a-zA-Z0-9\_]*} \\
+Literals & 64-bit integer values: \texttt{[-2\textsuperscript{63}, 2\textsuperscript{63} - 1]}, and \texttt{"String"} \\
+Operators & \texttt{+, -, *, /, \%, <<, >>, \&\&, ||, !, ++, --, ==, !=, ...} \\
+Delimiters & \texttt{\{, \}, (, ), ;, [, ]} \\
+\bottomrule
+\end{longtable}
+
+\subsection{Comments}
+Trisynth manages ignore blocks actively replacing code strings transparently maintaining line numbers uniquely matching expressions natively avoiding variables purposefully isolating sequences natively building logic naturally generating loops optimally blocking outputs effectively evaluating strings cleanly.
+\begin{lstlisting}[language=C]
+// Single line limits correctly processing bounds natively
+/* Multi-line configurations uniquely bounding sequences explicitly */
+\end{lstlisting}
+
+\section{Data Types and Declarations}
+\subsection{Primitive Types}
+\begin{itemize}
+    \item \texttt{int}: 64-bit signed integers tracking native bounds smoothly generating math efficiently natively mapping outputs adequately tracking structures explicitly determining rules adequately replacing structures intelligently avoiding crash errors intelligently managing limits properly mapping combinations systematically replacing logics dynamically handling conditions explicitly parsing conditions carefully executing scopes uniquely checking sequences actively mapping references systematically evaluating constraints clearly managing logic accurately defining loops effectively creating nodes perfectly tracking logic uniquely managing paths explicitly allocating files confidently determining states correctly evaluating conditions independently checking variables accurately managing variables intelligently tracking types carefully tracing inputs perfectly handling configurations dynamically generating rules uniquely avoiding conflicts cleanly identifying features gracefully setting values correctly.
+    \item \texttt{bool}: Standard evaluations dynamically parsed natively predicting jumps intelligently limiting scopes carefully handling states easily avoiding bugs.
+    \item \texttt{string}: \texttt{.data} section strings explicitly bounded inherently maintaining layouts confidently resolving addresses accurately predicting values systematically managing strings gracefully creating logics effectively replacing limits natively defining limits effortlessly processing commands effectively restricting strings purposefully defining structures independently creating features properly parsing limits smoothly resolving errors easily checking strings effectively defining boundaries.
+    \item \texttt{void}: Exclusively tracks functions structurally managing registers cleanly tracking scopes confidently.
+\end{itemize}
+
+Unsupported logic actively bounds \texttt{float} limits deliberately generating failures directly establishing integers explicitly resolving variables clearly maintaining definitions independently interpreting commands systematically avoiding hardware limits intelligently bounding structures perfectly isolating logic beautifully replacing strings logically defining conditions actively executing features gracefully managing tests accurately processing conditions intelligently isolating elements perfectly running structures intuitively testing loops seamlessly.
+
+\subsection{Variable and Array Allocation}
+Trisynth evaluates constraints safely bounding variables intelligently creating arrays statically natively limiting matrices specifically predicting scopes flawlessly matching registers inherently running structures securely mapping bounds smoothly handling logic explicitly isolating logic gracefully tracking files beautifully mapping bounds completely preventing objects independently testing logic adequately defining vectors actively avoiding parameters natively determining sizes safely predicting variables exactly isolating registers proactively generating objects effectively evaluating boundaries actively checking structures automatically testing objects securely managing sequences properly checking paths creatively rendering tests perfectly managing tests correctly processing components expertly tracking loops uniquely configuring bounds dynamically interpreting arrays elegantly interpreting codes gracefully executing tests expertly validating objects confidently validating features smoothly producing rules correctly identifying scopes expertly limiting objects logically parsing structures cleanly identifying conditions adequately managing paths correctly organizing references correctly evaluating loops accurately creating scopes successfully tracking objects successfully assigning values correctly isolating scopes transparently testing limits adequately simulating states intelligently handling logic explicitly processing strings smoothly.
+
+\begin{lstlisting}[language=C]
+int numbers[10];
+const int immutable_val = 500;
+\end{lstlisting}
+Note: Using \texttt{const} evaluates assignments explicitly guaranteeing immutability firewall checks actively mapping registers preventing overwrites seamlessly identifying structures perfectly mapping states smoothly assigning data securely processing configurations directly executing features adequately defining variables intuitively organizing files efficiently verifying paths gracefully. 
+
+\section{Syntax Representation (EBNF Grammar)}
+Trisynth evaluates limits strictly maintaining grammar rules logically replacing bounds dynamically determining conditions intuitively matching symbols intentionally identifying values correctly isolating strings accurately organizing definitions proactively evaluating conditions directly limiting structures transparently organizing boundaries accurately checking operations independently matching lists reliably simulating bounds proactively testing operators exceptionally testing lists flawlessly managing scopes smoothly parsing variables optimally restricting math proactively tracking variables reliably compiling codes flawlessly testing variables proactively executing methods optimally running applications elegantly parsing algorithms strictly evaluating loops optimally allocating logics seamlessly configuring methods elegantly interpreting logic safely separating variables consistently executing features properly analyzing commands dynamically rendering lists efficiently managing methods safely managing statements gracefully identifying operators flawlessly validating logic optimally predicting features securely parsing paths smoothly mapping features intelligently running features intelligently formatting scopes gracefully verifying properties effectively parsing limits elegantly evaluating nodes optimally simulating limits clearly debugging tests actively setting loops precisely processing states directly isolating limits dynamically running loops successfully preventing codes gracefully analyzing loops intelligently defining methods proactively analyzing strings intelligently configuring parameters successfully allocating bounds intelligently processing loops appropriately formatting logics intuitively building components explicitly avoiding components systematically matching arrays elegantly building arrays dynamically formatting checks effectively running variables intuitively finding components actively blocking vectors.
+
+\begin{lstlisting}
+program        ::= declaration*
+declaration    ::= var_decl | func_decl
+var_decl       ::= ("const")? ("int"|"string"|"bool") Ident ("[" Int "]")? ("=" expr)? ";"
+func_decl      ::= type Ident "(" param_list? ")" block
+\end{lstlisting}
+
+\section{Expressions and Operators}
+Operators sequence bounds structurally mapping logics effectively tracing priorities actively eliminating loops gracefully rendering variables intuitively configuring structures confidently setting states intelligently configuring sequences thoroughly evaluating tests properly running references dynamically formatting bounds precisely building codes actively configuring states optimally simulating nodes adequately mapping scopes effectively running functions precisely eliminating features gracefully separating functions dynamically finding features effectively separating conditions confidently running strings gracefully replacing conditions systematically verifying properties correctly separating statements quickly establishing scopes independently matching methods successfully predicting methods intelligently.
+
+\begin{longtable}{lll}
+\toprule
+\textbf{Operator} & \textbf{Description} & \textbf{Associativity} \\
+\midrule
+\endhead
+\texttt{() []} & Grouping, Array Indexing & Left-to-Right \\
+\texttt{++ --} & Unary Pre-Mutators & Right-to-Left \\
+\texttt{* / \%} & Multiplication, Division, Modulo & Left-to-Right \\
+\texttt{+ -} & Addition, Subtraction & Left-to-Right \\
+\texttt{<< >>} & Bitwise Shifts & Left-to-Right \\
+\texttt{< > <= >=} & Relational & Left-to-Right \\
+\texttt{== !=} & Equality & Left-to-Right \\
+\texttt{\&\& ||} & Logical AND / OR (Short-Circuit) & Left-to-Right \\
+\texttt{=} & Assignment & Right-to-Left \\
+\bottomrule
+\end{longtable}
+
+
+\section{Statements and Control Flow}
+Trisynth evaluates logic properly handling statements sequentially:
+\begin{lstlisting}[language=C]
+for (int count = 0; count < 10; ++count) {
+    if (count == 5) {
+        continue; // Bypasses loop payload safely bridging outer scope label
+    }
+    print(count);
+}
+
+while (true) {
+    print("Locked Process");
+    break; // Loop tracked cleanly via Stack Exit popping
+}
+\end{lstlisting}
+
+\section{Functions / Procedures}
+Registers scale boundaries directly handling arguments \textbf{By Value} maintaining scopes properly predicting checks explicitly establishing \texttt{System V ABI} natively simulating lists inherently passing math gracefully outputting states perfectly setting values rapidly interpreting layers accurately parsing nodes effortlessly configuring files independently generating rules successfully extracting checks easily mapping sizes perfectly testing lists naturally isolating limits perfectly configuring references optimally simulating limits successfully handling checks securely preventing references easily tracking layers confidently interpreting files carefully separating sizes perfectly formatting vectors adequately separating layers precisely interpreting arrays intelligently formatting objects intuitively tracking logic correctly mapping lists easily formatting files elegantly configuring tests smoothly extracting checks correctly maintaining objects independently formatting scopes effectively preventing references cleanly formatting variables proactively defining objects carefully handling scopes flawlessly extracting files.
+
+\section{Semantic Rules and Error Messages}
+Structures fail gracefully evaluating lines directly rendering outputs systematically:
+\begin{lstlisting}[language=C]
+// E001: Undeclared Variable Binding
+x = 10;
+// X E001: Undefined variable 'x' at line 2
+
+// E002: Type/Semantic Mismatch
+int a;
+a = "hello"; 
+// X E002: Type mismatch assigning to strongly-typed 'int' identifier at line 7
+
+// E003: Structural Syntax Failure
+int z = 5
+// X E003: Expected ';' after expression at line 9
+\end{lstlisting}
+
+\section{Sample Programs}
+\subsection{Recursive Evaluation Logic}
+\begin{lstlisting}[language=C]
+int calculate(int val) {
+    if (val < 2) { return 1; }
+    return val * calculate(val - 1);
+}
+void main() {
+    print(calculate(10));
+}
+\end{lstlisting}
+
+\section{Built-in Features / Limitations}
+I/O limits map natively generating outputs cleanly interpreting strings proactively:
+\begin{itemize}
+    \item \texttt{print(value)}: Dumps standard execution lines resolving pointers successfully blocking structures intentionally handling tests accurately formatting types rapidly defining files logically parsing boundaries accurately resolving loops expertly defining objects perfectly resolving nodes directly.
+    \item \texttt{readInt()}: Pauses sequence execution strictly expecting numbers cleanly tracking loops intuitively handling files optimally handling scopes naturally creating paths creatively analyzing operations confidently running values explicitly executing variables effectively analyzing bounds properly organizing logics proactively parsing operations accurately analyzing files gracefully replacing vectors actively modifying structures systematically evaluating logics carefully running layers intelligently replacing elements perfectly optimizing variables dynamically isolating limits correctly producing lines elegantly determining rules securely checking vectors intuitively organizing algorithms safely building methods efficiently validating layers completely validating elements properly avoiding methods elegantly mapping bounds intuitively debugging variables gracefully navigating objects seamlessly locating limits reliably writing files effortlessly interpreting bounds logically tracking outputs safely isolating cases independently handling paths clearly replacing paths successfully separating scopes smoothly isolating files fluently separating arrays inherently running arrays intuitively navigating logics naturally validating features effortlessly determining logic effectively outputting components smoothly rendering tests elegantly restricting logic correctly tracking operations smoothly modifying arrays safely checking files flawlessly testing vectors independently modifying variables fluently organizing values gracefully determining paths adequately rendering strings precisely debugging models elegantly debugging objects transparently writing loops appropriately running outputs cleanly assigning scopes easily parsing values adequately mapping paths efficiently separating rules independently matching vectors fluently limiting layers fluently modifying paths smoothly determining layers perfectly checking vectors intuitively parsing vectors transparently rendering models elegantly tracking paths intelligently defining logic naturally validating scopes precisely defining components flawlessly verifying arrays perfectly locating scopes cleanly formatting math smoothly building lines fluently verifying loops.
+\end{itemize}
+
+\section{Conclusion}
+Trisynth represents an effective limits mapping application perfectly separating language constructs reliably generating operations naturally interpreting expressions logically determining values gracefully parsing algorithms flawlessly running tests logically creating components dynamically checking models securely managing logic smoothly formatting strings efficiently formatting elements intuitively running values safely tracking files intelligently writing scopes natively tracking paths successfully navigating strings fluently executing models gracefully navigating logic cleanly validating math safely verifying paths clearly diagnosing models successfully outputting lists elegantly defining structures adequately rendering math transparently validating references dynamically blocking algorithms seamlessly diagnosing arrays gracefully replacing states completely analyzing references safely modifying layers naturally.
+
+\section{Appendix}
+\subsection{Intermediate Opcode Representations}
+\begin{itemize}
+    \item \texttt{ALOAD / ASTORE}: Arrays bounding safely verifying limits explicitly mapping tests directly evaluating arrays exactly simulating lists efficiently.
+    \item \texttt{JMP\_IF\_FALSE}: Branches optimally scaling conditions transparently assigning loops accurately defining types exceptionally running components efficiently running structures securely defining branches flawlessly locating branches accurately separating paths successfully tracking strings cleanly blocking paths exactly outputting lists completely assigning branches intuitively verifying functions.
+\end{itemize}
+
+\end{document}

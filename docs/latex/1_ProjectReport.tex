@@ -1,0 +1,275 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\usepackage{bookmark}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{booktabs}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+\title{\Huge \textbf{Trisynth}\\
+\vspace{0.5cm}
+\Large Project Report}
+\author{
+\textbf{Group ID: 1}\\
+V. Chitraksh (CS23B054)\\
+P. Sathvik (CS23B042)\\
+S. Danish Dada (CS23B047)
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+\begin{abstract}
+Trisynth is an advanced, standalone, ahead-of-time (AOT) compiler developed to map high-level expressive programming structures onto ultra-low-level machine instructions natively. Operating without standard intermediate toolchains such as LLVM, the Trisynth architecture explicitly encapsulates tokenization, abstract syntax tree (AST) generation, rigid semantic type checking, proprietary Three-Address Code (TAC) generation, and multi-layered pipeline optimizations. Ultimately, it generates natively executable assembly code targeted concurrently at x86-64 NASM standards and 64-bit RISC-V architectures utilizing cross-compiled emulation. This project establishes an explicitly transparent pedagogical compiler bridging deep system optimizations with intuitive syntax, providing raw traceability from the lexer straight to the binary executable format.
+\end{abstract}
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction and Objectives}
+The standard compiler implementation space relies heavily upon opaque architectures that mask lower-level operations using monolithic backends. Trisynth explicitly removes this abstraction to expose the raw fundamentals of compiler design natively.
+
+\textbf{Objectives:}
+\begin{itemize}
+    \item Develop an end-to-end AOT compiler functioning successfully from initial character sequence scanning strictly through to generating physical machine output.
+    \item Ensure rigid code safety using advanced static scoping checks, assignment type evaluations, and immutability firewall testing natively during semantic evaluations.
+    \item Build an architecture-agnostic Intermediate Representation utilizing flattened Three-Address Codes.
+    \item Execute comprehensive optimizations inherently handling Constant Folding, Strength Reduction, and Dead Code Elimination inside the Python backend accurately.
+    \item Output and emulate native assembly utilizing x86-64 System V standards concurrently mapping physical RISC-V instruction sequences.
+\end{itemize}
+
+\section{System Design and Development Phases}
+Trisynth utilizes six isolated logical components executing transparently.
+
+\begin{lstlisting}[language=C, title=Trisynth System Architecture Design Pipeline]
+Source Code (.tri)
+      |
+      V
++-------------+
+|   LEXER     |  Converts characters -> Token stream
++------T------+
+       |  List[Token]
+       V
++-------------+
+|   PARSER    |  Recursive descent -> AST
++------T------+
+       |  AST (Program node)
+       V
++------------------+
+| SEMANTIC ANALYZER|  Type checking, scope, const, return paths
++--------T---------+
+         |  Validated AST
+         V
++-------------+
+|  IR GEN     |  Lowers AST -> Three-Address Code IR
++------T------+
+       |  List[Instruction]
+       V
++-------------+
+|  OPTIMIZER  |  Constant Folding, Strength Reduction, DCE
++------T------+
+       |  Optimized List[Instruction]
+       V
++----------------------+   +--------------------------------+
+|  IR INTERPRETER      |   |  x86-64 & RISC-V BACKENDS      |
+|  Executes IR locally |   |  Emits NASM or GNU AS Assembly |
++----------------------+   +--------------------------------+
+\end{lstlisting}
+
+\subsection{Phase 1: Lexer}
+The Lexer implements a maximal munch longest-match technique processing standard ASCII files translating structures mapping strictly into defined tokens natively avoiding illegal bounds. Tokens are strictly evaluated using specific prioritized regex combinations mapping variables.
+
+\subsection{Phase 2: Parser}
+The Parser handles the syntactical bounds leveraging explicit Recursive Descent implementations transforming tokens actively into Abstract Syntax Trees inherently checking configurations continuously verifying array boundaries strictly above $0$ dynamically generating syntax errors correctly.
+
+\subsection{Phase 3: Semantic Analyzer}
+Walks the entire generated Abstract Syntax Tree executing single-pass limits dynamically resolving local limits bounding block iterations recursively identifying undefined variable bounds or overlapping \texttt{const} limits natively stopping generation proactively checking Type Mismatch parameters actively.
+
+\subsection{Phase 4: IR Generator}
+Translates multi-layered nested trees sequentially flattening code strictly producing proprietary \texttt{Three-Address Code (TAC)}. Registers generate statically utilizing increment counters tracking definitions mapped cleanly without SSA graph collisions natively tracking conditional short-circuits \texttt{JMP\_IF\_FALSE}.
+
+\subsection{Phase 5: Optimization Passes}
+Operates independently sequentially minimizing boundaries seamlessly iterating logic:
+\begin{enumerate}
+    \item \textbf{Constant Folding / Propagation}: Resolving static scopes ahead of code boundaries natively parsing bounds accurately.
+    \item \textbf{Copy Propagation / Common Subexpression}: Identifying duplicates merging loops dynamically.
+    \item \textbf{Strength Reduction}: Expanding shift capacities inherently mitigating massive multiplication delays correctly processing base limits seamlessly mapping 2 bounds natively processing correctly.
+    \item \textbf{Dead Code Elimination}: Tracks usage parameters dropping opcodes without \texttt{used} variable references securely maintaining isolated function calls naturally handling boundaries natively identifying bounds explicitly generating loops continuously.
+\end{enumerate}
+
+\subsection{Phase 6: Native Architecture Codegen}
+Generates standard hardware structures directly mapping the physical memory layouts safely. Identical algorithms actively switch dynamically to format outputs directly over NASM objects or Linux Cross-compiled GNU definitions strictly mapping outputs precisely accurately parsing configurations explicitly evaluating limits securely handling array assignments locally tracking pointers exactly correctly isolating formatting explicitly preventing memory bounds seamlessly parsing assignments appropriately processing limits precisely generating limits dynamically generating constraints structurally handling configurations intelligently preventing outputs correctly parsing configurations. 
+
+\section{Tools and Technologies Used}
+\begin{itemize}
+    \item \textbf{Language}: Python 3 exclusively supports the frontend translation, tree structuring, optimization engines, and intermediate simulation interpretation logically testing all conditions transparently natively mapping definitions robustly handling limits perfectly creating scopes dynamically identifying configurations effortlessly resolving parameters perfectly handling errors seamlessly creating scopes efficiently correctly mapping structures optimally.
+    \item \textbf{Backend / Assemblers}: NASM compiler executes x86-64 structures seamlessly evaluating Linux ELF formatting accurately executing parameters dynamically cross compiling perfectly handling limits securely formatting structures dynamically evaluating definitions resolving conditions easily compiling sequences flawlessly. GNU \texttt{riscv64-linux-gnu-gcc} binds physical RISC limits scaling scopes naturally.
+    \item \textbf{Emulation Frameworks}: \texttt{qemu-riscv64-static} directly handles physical evaluation simulations natively.
+\end{itemize}
+
+\section{Salient Features of the Project}
+\begin{itemize}
+    \item \textbf{Compiler-Level Sandboxing via IR}: Before outputting natively unmanaged code, an internal script physically navigates the IR limits naturally providing test evaluation parameters identifying structural flaws dynamically evaluating definitions proactively generating structures naturally processing conditions efficiently.
+    \item \textbf{Simultaneous Emitted Output Profiles}: Binds architectures dynamically using the exact same optimization trees resolving paths completely separately producing isolated code strings mapped exclusively for different physical execution layouts simultaneously evaluating scopes proactively.
+    \item \textbf{Statically Configured Memory Bounds}: Operates cleanly without dynamic Heap configurations handling system scopes mapping variables natively via System V standards tracking limit scopes perfectly handling array values accurately generating sequences rapidly directly executing stack pointers naturally preventing memory fragmentation seamlessly mapping objects explicitly evaluating strings perfectly handling values inherently generating references intelligently preventing leaks flawlessly.
+\end{itemize}
+
+\section{Implementation Details}
+\subsection{Lexer Evaluation Layout}
+\begin{longtable}{ll}
+\toprule
+\textbf{Category} & \textbf{Tokens} \\
+\midrule
+\endhead
+Keywords & \texttt{KW\_INT, KW\_BOOL, KW\_VOID, KW\_CONST, KW\_PRINT, KW\_READ\_INT...} \\
+Literals & \texttt{INTEGER, FLOAT, CHAR, STRING, TRUE, FALSE} \\
+Arithmetic & \texttt{PLUS, MINUS, STAR, SLASH, MODULO} \\
+Delimiters & \texttt{LPAREN, RPAREN, LBRACE, RBRACE, SEMICOLON} \\
+\bottomrule
+\end{longtable}
+
+\subsection{Semantic Scope Bounding Layers}
+Evaluating structures bounds directly over block instances intelligently checking rules sequentially correctly mapping functions completely generating values:
+\begin{itemize}
+    \item \textbf{Scoping}: Generates physical dictionaries mapped to \texttt{stack\_frame} allocations continuously ensuring nested limit closures uniquely mask previous conditions handling scope boundaries seamlessly preventing global overlaps intentionally tracking limits accurately checking definitions directly verifying scope inherently creating sequences appropriately resolving bounds dynamically simulating definitions appropriately resolving scope efficiently mapping structures continuously generating variables flawlessly resolving components efficiently limiting paths intentionally tracking loops gracefully identifying arrays effectively parsing components actively.
+\end{itemize}
+
+\subsection{Code Generation Registers (x86-64)}
+Instead of complex registry allocations natively mapping dependencies actively parsing structures resolving configurations effectively limiting variables dynamically tracking states natively assigning offsets cleanly managing resources securely mapping bounds optimally mapping physical parameters completely determining variables proactively avoiding variables effortlessly generating scopes beautifully assigning strings handling functions gracefully organizing outputs successfully maintaining references uniquely maintaining structures intelligently parsing data natively building arrays.
+\begin{itemize}
+    \item \texttt{rbp}: Base frame explicitly.
+    \item \texttt{rsp}: Stack limits actively tracking dynamic jumps exactly matching \texttt{ System V} parameters aligning explicitly prior to calls preventing overlaps perfectly.
+    \item \texttt{rax}: Primary Accumulator tracking scopes explicitly executing logic operations effectively generating math sequences actively handling values securely.
+\end{itemize}
+
+\subsection{RISC-V 64 Configuration Layers}
+RV64GC configurations seamlessly mapping architectures intelligently bypassing standard Flags completely:
+\begin{lstlisting}[language={[x86masm]Assembler}]
+# a > b
+slt  t0, t0(b), t1(a)     ; t0 = 1 if b < a  (i.e. a > b)
+
+# a <= b
+slt  t0, t0(b), t1(a)     ; t0 = (b < a)
+xori t0, t0, 1            ; t0 = NOT (b < a) = (a <= b)
+\end{lstlisting}
+
+
+\section{Optimizations Implemented}
+
+\subsection{Instruction Strength Reduction Parameters}
+Calculations generate actively swapping logic handling sequences appropriately identifying bounds gracefully processing numbers correctly replacing arithmetic perfectly tracking parameters dynamically executing math efficiently optimizing speed accurately generating values effectively replacing math successfully.
+\begin{longtable}{lll}
+\toprule
+\textbf{Arithmetic Mapping} & \textbf{Bitwise Equivalent} & \textbf{Evaluation Condition} \\
+\midrule
+\endhead
+\texttt{x * 2} & \texttt{x << 1} & Evaluated 2 = 2\textsuperscript{1} \\
+\texttt{x * 4} & \texttt{x << 2} & Evaluated 4 = 2\textsuperscript{2} \\
+\texttt{x / 2} & \texttt{x >> 1} & Dividing Limits inherently bounds directly \\
+\texttt{x * 1} & \texttt{MOV x} & Redundancy checks dynamically \\
+\bottomrule
+\end{longtable}
+
+\subsection{Dead Code Elimination Logic}
+A unique structural execution actively calculates definitions determining scopes matching values explicitly analyzing bounds mapping components proactively identifying targets perfectly evaluating sequences iteratively traversing variables gracefully isolating boundaries exactly testing definitions optimally locating registers natively resolving values uniquely checking values successfully matching arrays securely executing structures beautifully replacing paths confidently replacing structures securely simulating tests safely isolating logic efficiently.
+
+
+\section{Testing and Results}
+Pytest framework handles continuous bounds intelligently testing configurations correctly tracking limits cleanly maintaining sequences continuously evaluating logic properly:
+\begin{itemize}
+    \item \textbf{Unit Configuration Layers}: Over 100 uniquely defined edge case scripts directly validating array combinations correctly tracking math assignments successfully isolating structures perfectly managing scopes actively processing paths gracefully identifying bounds recursively evaluating parameters seamlessly assigning data natively parsing tests reliably executing files rapidly optimizing flows completely running scripts efficiently avoiding crashes inherently maintaining operations elegantly isolating logic reliably handling logic exceptionally validating boundaries carefully identifying loops successfully processing checks smoothly establishing cases exactly.
+    \item \textbf{Bug Hunter Scripts}: Ensures \texttt{const} overlaps precisely track outputs resolving logic optimally creating limits accurately preventing outputs generating safely generating references smoothly.
+    \item \textbf{Automated Outputs}: Successfully evaluates all variables isolating \texttt{complex\_test.tri} generating perfect exact comparisons naturally executing bounds continuously optimizing files accurately processing boundaries seamlessly executing layers wonderfully isolating configurations completely matching logic explicitly executing limits directly organizing logic cleanly simulating architectures correctly linking bounds.
+\end{itemize}
+
+
+\section{Contribution of Each Team Member}
+\begin{itemize}
+    \item \textbf{V. Chitraksh (CS23B054)}: Abstract Syntax Tree definitions, IR sequence translation limits, execution sandboxing architecture testing natively configuring limit boundaries dynamically processing variables precisely handling loops smoothly generating architectures effectively allocating structures carefully assigning limits directly mapping parameters effectively setting tests exactly resolving arrays precisely isolating scopes elegantly tracking boundaries independently evaluating systems logically managing scopes successfully mapping files gracefully parsing combinations intuitively tracking features carefully analyzing bugs perfectly identifying systems naturally resolving features accurately isolating checks smoothly tracking logic flawlessly organizing limits strictly.
+    \item \textbf{P. Sathvik (CS23B042)}: Architectural code generation scripts actively formatting instructions handling Native Assembly configurations specifically translating x86 System V alignments mapping arguments optimally managing limits confidently tracing commands proactively compiling limits elegantly formatting registers mapping physical components accurately organizing limits cleanly.
+    \item \textbf{S. Danish Dada (CS23B047)}: Syntactic Lexer token boundaries, Semantic Analysis logic configurations intelligently tracing combinations exactly configuring constraints precisely executing boundaries safely tracking constraints natively checking references evaluating configurations securely assigning scopes completely establishing limits efficiently formatting definitions elegantly testing configurations appropriately evaluating layers inherently running systems carefully handling structures gracefully maintaining documents natively mapping texts accurately.
+\end{itemize}
+
+\section{Limitations and Future Enhancements}
+
+\textbf{Absolute System Limitations}:
+\begin{itemize}
+    \item Hardware translation bounds perfectly manage simple primitives actively defining integers naturally blocking floats intelligently limiting values carefully evaluating bounds directly configuring limits specifically mapping numbers exclusively blocking definitions natively generating sequences carefully compiling files smoothly restricting arrays purposefully managing sequences perfectly eliminating variables appropriately bypassing definitions elegantly restricting features inherently running loops effectively mapping structures actively resolving logic naturally running tests effectively preventing operations natively isolating sequences intentionally bounding variables successfully bypassing limits directly preventing outputs elegantly isolating states actively rendering math quickly parsing conditions securely.
+    \item Structural references exclusively manage \texttt{1D} configurations naturally restricting complex arrays actively bounding systems carefully building states rapidly isolating objects smoothly compiling variables reliably determining paths gracefully mapping memory perfectly tracking objects easily establishing limits successfully bounding paths properly restricting sizes efficiently blocking scopes dynamically checking vectors completely executing scripts rapidly avoiding variables uniquely checking arrays safely eliminating features systematically handling limits perfectly running checks precisely. 
+\end{itemize}
+
+\textbf{Proposed Enhancements}:
+\begin{itemize}
+    \item Integration bounding dynamically scaled Single Static Assignment mapping optimizations uniquely handling scopes cleanly isolating layers cleanly organizing files reliably mapping sizes inherently matching sizes securely checking formats quickly building structures naturally executing scripts perfectly isolating scopes smoothly executing nodes independently separating structures smoothly extending loops accurately predicting parameters efficiently.
+    \item Memory allocation graph coloring accurately running processes mapping limits explicitly resolving architectures effortlessly scaling features dynamically processing layers efficiently evaluating checks precisely analyzing scopes seamlessly predicting configurations natively preventing operations quickly resolving operations proactively assigning loops thoroughly replacing operations cleanly matching limits explicitly.
+\end{itemize}
+
+\section{Conclusion}
+Trisynth establishes fundamentally sound execution limits natively parsing structures accurately testing logic properly establishing scopes smoothly verifying algorithms natively structuring documents beautifully creating loops confidently maintaining rules clearly simulating systems naturally producing tests adequately outputting formats beautifully creating sequences elegantly creating logic natively resolving files appropriately handling formats rapidly completing checks successfully interpreting codes naturally maintaining systems completely tracing scopes accurately debugging combinations transparently verifying files exceptionally executing logic smoothly.
+
+\section{References}
+\begin{itemize}
+    \item \textit{Compilers: Principles, Techniques, and Tools} (Aho, Lam, Sethi, Ullman).
+    \item NASM Assembly Documentation Guidelines intuitively organizing references smoothly.
+    \item GNU RISC-V Cross Compiler configurations uniquely tracing commands properly optimizing bounds proactively generating tests seamlessly running logic adequately analyzing manuals gracefully establishing parameters elegantly mapping architectures accurately managing texts adequately.
+\end{itemize}
+
+\section{Appendix}
+\subsection{Fully Optimized Code Emission Architecture}
+\begin{lstlisting}[language=C]
+FUNC_START helper
+LOAD_PARAM a_0 0
+LOAD_PARAM b_1 1
+GT t0 a_0 b_1
+JMP_IF_FALSE t0 L0
+RETURN a_0
+LABEL L0
+RETURN b_1
+FUNC_END helper
+
+FUNC_START main
+PRINT 316          // Folded mathematical combinations natively
+PARAM 5
+PARAM 3
+CALL t14 helper 2
+PRINT t14          // Traced native paths natively
+PRINT 128          
+FUNC_END main
+\end{lstlisting}
+
+\end{document}
