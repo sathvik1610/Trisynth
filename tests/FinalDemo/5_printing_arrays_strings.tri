@@ -1,0 +1,17 @@
+// 5. Printing Arrays and Strings
+void main() {
+    string msg1 = "Welcome to Trisynth Demo!";
+    string msg2 = "Array elements are:";
+    
+    print(msg1);
+    print(msg2);
+
+    int elements[3];
+    elements[0] = 99;
+    elements[1] = 100;
+    elements[2] = 101;
+
+    for (int i = 0; i < 3; ++i) {
+        print(elements[i]);
+    }
+}

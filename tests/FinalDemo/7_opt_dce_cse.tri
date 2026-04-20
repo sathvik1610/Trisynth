@@ -1,0 +1,19 @@
+// 7. Optimizations: Dead Code Elimination & Common Subexpression Elimination
+void main() {
+    print("Testing DCE and CSE:");
+    
+    // Dead Code Elimination: This pure computation will be completely removed since it's never used!
+    int dead_code = 999 * 888;
+    int unused = 1000;
+    
+    // Common Subexpression Elimination
+    int a = 10;
+    int b = 20;
+
+    // The expression "a * b" is evaluated once and the instruction result is reused for res2!
+    int res1 = a * b;
+    int res2 = a * b;
+    
+    int total = res1 + res2;
+    print(total);
+}

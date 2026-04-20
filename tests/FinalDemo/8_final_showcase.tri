@@ -1,0 +1,38 @@
+// 8. Final Showcase combining Primitive types, Prints, Loops, Arrays, Strings
+int factorial(int n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+void main() {
+    // Strings and Primitives
+    string welcome = "--- TRISYNTH FINAL SHOWCASE ---";
+    print(welcome);
+    
+    int limit = 5;
+    bool is_ready = true;
+    
+    if (is_ready) {
+        print("System is ready. Computing factorials block:");
+    }
+
+    // Array and Loops
+    int values[5];
+    for (int i = 0; i < limit; ++i) {
+        // Calling a function and storing in array
+        values[i] = factorial(i + 1);
+    }
+    
+    // Prints and iterations
+    string res_msg = "Factorial Results:";
+    print(res_msg);
+
+    for (int j = 0; j < limit; ++j) {
+        print(values[j]);
+    }
+    
+    string done = "--- SHOWCASE COMPLETE ---";
+    print(done);
+}
