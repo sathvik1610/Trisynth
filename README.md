@@ -13,10 +13,11 @@ It compiles NanoC source through every classical stage — Lexing → Parsing �
 1. [Project Overview (Goals & Non-Goals)](#1-project-overview-goals--non-goals)
 2. [Installation Procedure & Quick Start](#2-installation-procedure--quick-start)
 3. [Documentation](#3-documentation)
-4. [Test Suite](#4-test-suite)
-5. [Limitations & Known Behaviors](#5-limitations--known-behaviors)
-6. [Future Work](#6-future-work)
-7. [Contributors](#7-contributors)
+4. [Developer Guide](#4-developer-guide)
+5. [Test Suite](#5-test-suite)
+6. [Limitations & Known Behaviors](#6-limitations--known-behaviors)
+7. [Future Work](#7-future-work)
+8. [Contributors](#8-contributors)
 
 ---
 
@@ -134,7 +135,80 @@ Contains comprehensive architectural details covering the Lexer, Parser, Semanti
 
 ---
 
-## 4. Test Suite
+## 4. Developer Guide
+
+If you want to modify Trisynth or understand its internals, you can run the raw Python source code directly without using the pre-compiled binaries.
+
+### Prerequisites
+
+Ensure you have Python 3.10+ installed. Clone the repository and install the required development dependencies:
+
+```bash
+git clone https://github.com/sathvik1610/Trisynth.git
+cd Trisynth
+pip install -r requirements.txt
+```
+
+If you plan to manually assemble and run the native machine code outputs (x86-64 or RISC-V), you will also need the respective external toolchains:
+
+**Debian / Ubuntu / WSL:**
+```bash
+# For x86-64 assembly
+sudo apt-get install nasm gcc
+
+# For RISC-V emulation
+sudo apt-get install qemu-user gcc-riscv64-linux-gnu
+```
+
+**Windows Native:**
+- Install [NASM](https://www.nasm.us/) and add it to your PATH.
+- Install [MinGW-w64 (GCC)](https://www.mingw-w64.org/) for linking.
+*(Note: RISC-V emulation is only supported via WSL on Windows).*
+
+### Running from Source
+
+Instead of using the `./trisynth` binary via the release artifacts, execute the compiler through the main entry point to generate the `.asm` (x86) or `.s` (RISC-V) files. Then, use external assemblers to link and run them.
+
+```bash
+# 1. Compile NanoC code to Assembly
+python src/main.py path/to/source.tri --asm
+
+# 2a. Assemble and Link x86-64 (Linux/WSL)
+nasm -f elf64 output.asm -o output.o
+gcc -no-pie output.o -o program
+./program
+
+# 2b. Assemble and Link RISC-V (Linux/WSL)
+riscv64-linux-gnu-gcc -static output_riscv.s -o program_riscv
+qemu-riscv64 ./program_riscv
+
+# Interactive REPL mode for quick testing without ASM
+python src/main.py --demo
+```
+
+### Pipeline Debugging Flags
+
+When making changes to specific phases of the compiler (like the Parser or the IR Generator), use debugging flags to visualize intermediate outputs:
+
+- **Lexer Output**: `python src/main.py --tokens file.tri`
+- **AST Output**: `python src/main.py --ast file.tri`
+- **IR Output**: `python src/main.py --ir file.tri`
+- **Assembly Output**: `python src/main.py --asm file.tri`
+- **Full Execution Trace**: `python src/main.py -v file.tri`
+
+*(Note: The `trisynth` binary supports these exact same flags.)*
+
+### Modifying the Codebase
+
+- **Frontend** (`src/frontend/`): Modify `lexer.py` to add new tokens or `parser.py` to change syntax grammar rules.
+- **Semantics** (`src/semantic/`): Modify `analyzer.py` to apply new type checks or scoping rules.
+- **IR Generation** (`src/ir/`): Update `ir_gen.py` and `instructions.py` to alter Three-Address Code generation behavior.
+- **Optimization** (`src/optimization/`): Add or tweak new optimization passes here.
+- **Backend** (`src/backend/`): Adjust the target assembly emission and stack-machine translations in `x86_allocator.py` or `riscv_allocator.py`.
+
+---
+
+## 5. Test Suite
 
 The test suite lives in `tests/unit/` and is run with `pytest`. All 98 tests complete in under 0.2 seconds.
 
@@ -173,7 +247,7 @@ python -m pytest --tb=short
 
 ---
 
-## 5. Limitations & Known Behaviors
+## 6. Limitations & Known Behaviors
 
 ### Language Limitations
 | Limitation | Detail |
@@ -204,7 +278,7 @@ python -m pytest --tb=short
 
 ---
 
-## 6. Future Work
+## 7. Future Work
 
 | Enhancement | Description |
 |---|---|
@@ -219,7 +293,7 @@ python -m pytest --tb=short
 
 ---
 
-## 7. Contributors
+## 8. Contributors
 
 | Name | ID |
 |---|---|
