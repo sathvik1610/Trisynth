@@ -47,6 +47,8 @@ Alternatively, see the [INSTALL.md](INSTALL.md) and [SETUP.md](SETUP.md) quick g
 
 ### Step 1 — Download the Right Release
 
+[Releases](releases/)
+
 | Platform | Download |
 |---|---|
 | Linux | `Trisynth-Linux.zip` |
