@@ -1,10 +1,10 @@
 # Trisynth Compiler
 
-**Trisynth** is a custom-built native compiler for **NanoC**, a minimal C-like language designed as a complete, pedagogically clear compiler construction reference.  
+**Trisynth** is a custom-built native compiler for **NanoC**, a minimal, statically typed, C-like language.  
 It compiles NanoC source through every classical stage — Lexing → Parsing → Semantic Analysis → IR Generation → Optimization → Native Code (x86-64 & RISC-V) — exposing each phase's internal representation and error reporting.
 
 > [!NOTE]
-> **Academic Disclaimer**: Trisynth is built to demonstrate compiler theory. Design decisions consistently choose *readability and correctness* over *performance and completeness*.
+> Trisynth is built from scratch with no parser generators or LLVM. Design decisions favour *readability and correctness* over *performance and completeness*.
 
 ---
 
@@ -39,70 +39,84 @@ It compiles NanoC source through every classical stage — Lexing → Parsing �
 
 ## 2. Installation Procedure & Quick Start
 
-Trisynth provides cross-platform support for Linux, Windows with WSL, and native Windows. For detailed, step-by-step setup instructions and troubleshooting, please refer to our **Installation Manuals**:
+Trisynth compiles to native code, so it needs three tools: **Python 3.8+**, **NASM** (assembler) and **GCC** (linker). The easiest way to get all three is Linux or WSL (Windows Subsystem for Linux).
 
-- [Installation Manual (PDF)](docs/deliverables/Installation_Manual.pdf)
-- [Installation Manual (Markdown)](docs/deliverables/Installation_Manual.md)
+### Option A — Linux or Windows WSL (recommended)
 
-Alternatively, see the [INSTALL.md](INSTALL.md) and [SETUP.md](SETUP.md) quick guides.
+**1. Install the tools (one time):**
 
-### Step 1 — Download the Right Release
-
-[Releases](releases/)
-
-| Platform | Download |
-|---|---|
-| Linux | `Trisynth-Linux.zip` |
-| Windows with WSL | `Trisynth-Windows-WSL.zip` |
-| Windows (no WSL) | `Trisynth-Windows-Native.zip` |
-
-### Step 2 — Setup
-
-**Linux / WSL:**
 ```bash
-# ⚠️ WSL users: extract to your Linux home directory, NOT /mnt/c/...
-unzip Trisynth-Windows-WSL.zip -d ~/Trisynth
+sudo apt update && sudo apt install -y git python3 gcc nasm
+```
+
+**2. Get the code and run a program:**
+
+```bash
+git clone https://github.com/sathvik1610/Trisynth.git ~/Trisynth
+cd ~/Trisynth
+python3 src/main.py tests/FinalDemo/1_fibonacci.tri
+```
+
+Expected output: `Fibonacci of 10 is:55`
+
+> **WSL users:** do not use a Windows path such as `/mnt/c/...` or `/mnt/d/...`. Clone into your Linux home directory (`~`) as shown above, otherwise file permissions break.
+> Don't have WSL yet? Open PowerShell as Administrator, run `wsl --install`, restart, then open the **Ubuntu** app and follow the steps above.
+
+### Option B — Windows native (no WSL)
+
+1. Download `releases/Trisynth-Windows-Native.zip` from this repository and unzip it.
+2. Double-click `setup.bat` (it downloads a portable NASM; MinGW `gcc` must be installed).
+3. Open Command Prompt in that folder and run:
+
+```cmd
+trisynth.exe demo2_strength_reduction.tri
+```
+
+RISC-V output (`--arch riscv`) is not available on native Windows; use WSL for it.
+
+### Option C — Prebuilt Linux binary (no Python needed)
+
+```bash
+unzip releases/Trisynth-Linux.zip -d ~/Trisynth
 cd ~/Trisynth
 bash setup.sh
-```
-
-**Windows Native:**
-```
-Double-click setup.bat
-```
-
-### Step 3 — Compile and Run
-
-**Linux / WSL:**
-```bash
 ./trisynth demo2_strength_reduction.tri
-./trisynth demo4_array.tri
-./trisynth yourfile.tri
 ```
 
-**Windows Native:**
-```cmd
-trisynth.exe yourfile.tri
-```
+### Everyday usage
 
-### Compilation Flags
+```bash
+python3 src/main.py <file.tri> [flags]      # from source
+./trisynth <file.tri> [flags]               # prebuilt binary
+```
 
 | Flag | Effect |
 |---|---|
-| *(none)* | Compile and run silently |
-| `-v` / `--verbose` | Print all pipeline phases |
-| `--tokens` | Print tokens and stop |
-| `--ast` | Print AST and stop |
-| `--ir` | Print IR + optimization passes and stop |
-| `--asm` | Print generated assembly and stop |
+| *(none)* | Compile and run the program |
+| `-v` / `--verbose` | Print every compilation phase |
+| `--tokens` | Print lexer tokens and stop |
+| `--ast` | Print the Abstract Syntax Tree and stop |
+| `--ir` | Print the IR and each optimization pass, then stop |
+| `--asm` | Print the generated x86-64 assembly and stop |
 | `--arch x86` | Target x86-64 (default) |
 | `--arch riscv` | Target RISC-V 64-bit (Linux/WSL only) |
-| `--arch both` | Compile both architectures |
-| `--compare-asm` | Show x86 and RISC-V assembly side by side |
-| `--benchmark` | Benchmark x86 vs RISC-V (QEMU) |
+| `--arch both` | Compile for both architectures |
+| `--compare-asm` | Show x86-64 and RISC-V assembly side by side |
+| `--benchmark` | Benchmark x86 vs RISC-V (needs QEMU) |
 | `--demo` | Interactive REPL mode |
 
-### Sample Program
+### Try the demos
+
+All demo programs live in `tests/FinalDemo/`:
+
+```bash
+python3 src/main.py tests/FinalDemo/2_bubble_sort.tri
+python3 src/main.py tests/FinalDemo/6_opt_const_fold_strength.tri --ir   # watch the optimizer work
+python3 src/main.py tests/FinalDemo/8_final_showcase.tri --asm
+```
+
+### Sample program
+
 ```c
 // Recursive factorial
 int factorial(int n) {
@@ -116,6 +130,18 @@ void main() {
     print(factorial(5));   // Output: 120
 }
 ```
+
+Save it as `hello.tri` and run `python3 src/main.py hello.tri`.
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `No assembler toolchain found` | `nasm` or `gcc` is missing. Install them (Option A, step 1). |
+| `Permission denied` in WSL | You are inside `/mnt/...`. Clone into `~` instead. |
+| `python3: command not found` | `sudo apt install python3` |
+
+For more detail see [INSTALL.md](INSTALL.md), [SETUP.md](SETUP.md) and the [Installation Manual](docs/deliverables/Installation_Manual.md).
 
 ---
 
