@@ -157,7 +157,7 @@ Generates standard hardware structures directly mapping the physical memory layo
 \midrule
 \endhead
 Keywords & \texttt{KW\_INT, KW\_BOOL, KW\_VOID, KW\_CONST, KW\_PRINT, KW\_READ\_INT...} \\
-Literals & \texttt{INTEGER, FLOAT, CHAR, STRING, TRUE, FALSE} \\
+Literals & \texttt{INTEGER, CHAR, STRING, TRUE, FALSE} \\
 Arithmetic & \texttt{PLUS, MINUS, STAR, SLASH, MODULO} \\
 Delimiters & \texttt{LPAREN, RPAREN, LBRACE, RBRACE, SEMICOLON} \\
 \bottomrule
@@ -200,7 +200,7 @@ Calculations generate actively swapping logic handling sequences appropriately i
 \endhead
 \texttt{x * 2} & \texttt{x << 1} & Evaluated 2 = 2\textsuperscript{1} \\
 \texttt{x * 4} & \texttt{x << 2} & Evaluated 4 = 2\textsuperscript{2} \\
-\texttt{x / 2} & \texttt{x >> 1} & Dividing Limits inherently bounds directly \\
+\texttt{x / 2} & \texttt{(x + (x < 0)) >> 1} & Signed division: negative dividends are biased \\
 \texttt{x * 1} & \texttt{MOV x} & Redundancy checks dynamically \\
 \bottomrule
 \end{longtable}

@@ -61,7 +61,7 @@ Token(type: TokenType, value: str, line: int, column: int)
 | Category | Tokens |
 |---|---|
 | Keywords | `KW_INT`, `KW_BOOL`, `KW_VOID`, `KW_IF`, `KW_ELSE`, `KW_WHILE`, `KW_FOR`, `KW_RETURN`, `KW_CONST`, `KW_TRUE`, `KW_FALSE`, `KW_PRINT`, `KW_READ_INT`, `KW_BREAK`, `KW_CONTINUE` |
-| Literals | `INTEGER`, `FLOAT`, `CHAR` |
+| Literals | `INTEGER`, `CHAR` |
 | Identifiers | `IDENTIFIER` |
 | Arithmetic | `PLUS`, `MINUS`, `STAR`, `SLASH`, `MODULO` |
 | Relational | `LT`, `GT`, `LTE`, `GTE`, `EQ`, `NEQ` |
@@ -96,7 +96,7 @@ declaration     → func_decl | stmt
 func_decl       → type IDENTIFIER '(' params? ')' block
 params          → param (',' param)*
 param           → type IDENTIFIER ('[' ']')?
-type            → 'int' | 'bool' | 'void' | 'float'
+type            → 'int' | 'bool' | 'void'
 block           → '{' stmt* '}'
 stmt            → var_decl | if_stmt | while_stmt | for_stmt
                 | return_stmt | break_stmt | continue_stmt
@@ -112,7 +112,7 @@ relational      → addition (('<'|'>'|'<='|'>=') addition)*
 addition        → multiplication (('+'|'-') multiplication)*
 multiplication  → unary (('*'|'/'|'%') unary)*
 unary           → ('!'|'++'|'--') unary | primary
-primary         → INTEGER | FLOAT | 'true' | 'false'
+primary         → INTEGER | 'true' | 'false'
                 | IDENTIFIER | IDENTIFIER '(' args? ')'
                 | IDENTIFIER '[' expr ']'
                 | '(' expr ')'
@@ -278,9 +278,11 @@ Replaces expensive operations with cheaper bitwise equivalents:
 | Pattern | Replacement | Condition |
 |---|---|---|
 | `MUL result x N` | `LSHIFT result x log2(N)` | N is power of 2, N ≥ 2 |
-| `DIV result x N` | `RSHIFT result x log2(N)` | N is power of 2, N ≥ 2 |
+| `DIV result x N` | sign-corrected `RSHIFT` (see below) | N is power of 2, N ≥ 2, dividend not constant |
 | `MUL result x 0` | `MOV result 0` | N == 0 |
 | `MUL result x 1` | `MOV result x` | N == 1 |
+
+A bare right shift rounds toward negative infinity while `/` truncates toward zero, so a signed division by 2^k expands to `neg = x < 0`, `bias = (neg << k) - neg`, `sum = x + bias`, `result = sum >> k`, i.e. `(x + (x < 0 ? 2^k - 1 : 0)) >> k`. Constant dividends are left to constant folding.
 
 #### Pass 3 — Dead Code Elimination (DCE)
 - Builds the set of **used variables** by scanning all `arg1` and `arg2` fields across the entire instruction list.
@@ -419,8 +421,8 @@ IRInterpreter(ir_list).run()
 | `x * 2` | `x << 1` | 2 = 2¹ |
 | `x * 4` | `x << 2` | 4 = 2² |
 | `x * 8` | `x << 3` | 8 = 2³ |
-| `x / 2` | `x >> 1` | 2 = 2¹ |
-| `x / 4` | `x >> 2` | 4 = 2² |
+| `x / 2` | `(x + (x < 0 ? 1 : 0)) >> 1` | 2 = 2¹ |
+| `x / 4` | `(x + (x < 0 ? 3 : 0)) >> 2` | 4 = 2² |
 | `x * 0` | `0` | zero mul |
 | `x * 1` | `x` | identity |
 
@@ -481,7 +483,7 @@ CALL, PARAM, PRINT, RETURN, ASTORE, ALOAD, ARR_DECL, JMP, JMP_IF_FALSE, LABEL
 
 ## 8. Test Suite
 
-The test suite lives in `tests/unit/` and is run with `pytest`. All 98 tests complete in under 0.2 seconds.
+The test suite lives in `tests/unit/` and is run with `pytest`. All 182 tests complete in a few seconds (the native x86-64 tests are skipped when `nasm`/`gcc` are unavailable).
 
 ### Test Files
 
@@ -528,15 +530,15 @@ python -m pytest --tb=short
 | No switch statement | Use `if/else if/else` chains |
 | No ternary operator | Use `if/else` instead |
 | No function pointers | Functions are not first-class values |
-| Float support minimal | `float` is a keyword but IR/backend treats float literals as int where possible |
+| No `float` or `uint32` | Neither is a keyword; floating-point literals such as `3.14` are a lexical error. `char` is parsed but rejected by the semantic analyzer |
 
 ### Runtime Behaviors
 | Situation | Behavior |
 |---|---|
 | Array out-of-bounds | Undefined behavior — no runtime check |
-| Integer overflow | Undefined behavior — follows Python int semantics in interpreter |
+| Integer overflow | Wraps around (signed 64-bit two's complement); folded constants follow the same rule |
 | Reading uninitialized local | Undefined — gets 0 in IR interpreter by default |
-| Division by zero | Undefined — Python `ZeroDivisionError` in interpreter |
+| Division by zero | Traps at runtime (SIGFPE on x86-64); never constant-folded |
 | Deep recursion | Limited by Python recursion depth in the IR interpreter |
 
 ### Compiler Behaviors
@@ -662,7 +664,7 @@ code generators. This separation makes debugging much easier.
 
 ## Stage 7 — X86-64 Code Generation
 
-**File:** `src/backend/codegen.py`
+**File:** `src/backend/codegen_x86.py`
 **Class:** `X86Generator`
 **Output:** `output.asm` (NASM syntax, ELF64 format)
 
@@ -869,7 +871,7 @@ main:
 
 ## Stage 8 — RISC-V 64-bit Code Generation
 
-**File:** `src/backend/codegen_riscv.py`
+**File:** `src/backend/riscv/codegen_riscv.py`
 **Class:** `RISCVGenerator`
 **Output:** `output_riscv.s` (GNU Assembler syntax)
 **Architecture:** RV64GC (RISC-V 64-bit, General + Compressed extensions)

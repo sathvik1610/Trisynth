@@ -32,3 +32,18 @@ def test_invalid_argument_count():
 def test_const_reassignment():
     with pytest.raises(Exception, match="Cannot assign to const variable"):
         _analyze("void main() { const int X = 10; X = 20; }")
+
+def test_const_array_element_assignment_rejected():
+    with pytest.raises(Exception, match="const array"):
+        _analyze("void main() { const int a[3]; a[0] = 1; }")
+
+def test_non_const_array_element_assignment_allowed():
+    _analyze("void main() { int a[3]; a[0] = 1; }")
+
+def test_const_array_can_be_read():
+    _analyze("void main() { const int a[3]; int x = a[1]; }")
+
+def test_float_and_uint32_are_not_types():
+    for code in ("void main() { float f; }", "void main() { uint32 u; }"):
+        with pytest.raises(Exception):
+            _analyze(code)

@@ -81,7 +81,7 @@ code generators. This separation makes debugging much easier.
 
 ## Stage 7 — X86-64 Code Generation
 
-**File:** `src/backend/codegen.py`
+**File:** `src/backend/codegen_x86.py`
 **Class:** `X86Generator`
 **Output:** `output.asm` (NASM syntax, ELF64 format)
 
@@ -288,7 +288,7 @@ main:
 
 ## Stage 8 — RISC-V 64-bit Code Generation
 
-**File:** `src/backend/codegen_riscv.py`
+**File:** `src/backend/riscv/codegen_riscv.py`
 **Class:** `RISCVGenerator`
 **Output:** `output_riscv.s` (GNU Assembler syntax)
 **Architecture:** RV64GC (RISC-V 64-bit, General + Compressed extensions)

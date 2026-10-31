@@ -102,7 +102,7 @@ my_variable    COUNT    _temp    x1
 The following identifiers are reserved and may not be used as variable or function names:
 
 ```
-int    uint32    float    bool    char    void    string    const
+int    bool    char    void    string    const
 if     else      while    for     break   continue return
 print  readInt   true     false
 ```
@@ -127,11 +127,10 @@ Trisynth is statically and strongly typed. The type of every expression is deter
 | Type | Description | Literal Form |
 |---|---|---|
 | `int` | 64-bit signed integer | `0`, `-42`, `1000` |
-| `uint32` | Unsigned 32-bit integer | `0`, `255` |
 | `bool` | Boolean value | `true`, `false` |
 | `string` | Immutable character pointer to a read-only literal | `"Hello"` |
 
-> **Note:** The types `float` and `char` are syntactically recognized but are rejected by the semantic analyzer with an `E002` error. They are reserved for future back-end support.
+> **Note:** `char` is syntactically recognized but is rejected by the semantic analyzer with an `E002` error. `float` and `uint32` are not part of the language: they are ordinary identifiers, and floating-point literals such as `3.14` are a lexical error.
 
 ### 4.1 Integer Literals
 
@@ -205,6 +204,13 @@ Any attempt to assign to, increment, or decrement a `const` variable is a compil
 // ++MAX;       // Error: Cannot increment/decrement const variable `MAX`
 ```
 
+`const` also applies to array declarations. Elements of a `const` array cannot be assigned:
+
+```c
+const int table[4];
+// table[0] = 1;   // Error: Cannot mutate elements of const array `table`
+```
+
 ---
 
 ## 6. Operators
@@ -224,6 +230,8 @@ Any attempt to assign to, increment, or decrement a `const` variable is a compil
 | `--` | Pre-decrement | `--i` |
 
 All arithmetic operators require both operands to be of the same type.
+
+`int` is a signed 64-bit two's-complement integer. `+`, `-`, `*` and `<<` wrap around on overflow, `/` and `%` truncate toward zero (so `-7 / 2` is `-3` and `-7 % 3` is `-1`), and `>>` is an arithmetic shift. The optimizer preserves these semantics: constant folding emulates them, and division by a power of two is reduced to a shift only together with a correction for negative dividends. Division by zero (and `INT64_MIN / -1`) traps at runtime and is never folded.
 
 ### 6.2 Relational Operators
 
@@ -531,7 +539,7 @@ Arise from type violations, undeclared identifiers, or structural rule violation
 | Error Code | Description | Example |
 |---|---|---|
 | `E002` | Type mismatch or unsupported type | Assigning `bool` to `int` variable |
-| `E002` | Unsupported type in declaration | `float x = 3.14;` |
+| `E002` | Unsupported type in declaration | `char c = 'a';` |
 | `E003` | `return` outside a function | Bare `return` at global scope |
 | `E004` | Missing `main` entry point | No `void main()` or `int main()` defined |
 | — | Undeclared variable | Using `y` before `int y;` |
@@ -703,7 +711,7 @@ The following limitations apply to the current release of Trisynth:
 
 | Limitation | Description |
 |---|---|
-| No `float` or `char` support | Both types are lexed and parsed but rejected by the semantic analyzer with `E002`. |
+| No `float`, `uint32` or `char` support | `float` and `uint32` are not keywords (floating-point literals are a lexical error); `char` is parsed but rejected by the semantic analyzer with `E002`. |
 | No string operations | String comparison, concatenation, and indexing are not supported. |
 | No runtime bounds checking | Array out-of-bounds access results in undefined behavior at runtime. |
 | No multi-file compilation | The compiler accepts a single source file per invocation; there is no `#include` or module system. |

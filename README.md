@@ -27,7 +27,7 @@ It compiles NanoC source through every classical stage — Lexing → Parsing �
 - **Full pipeline visibility** — every compilation phase produces inspectable output (tokens, AST, IR, optimized IR, assembly).
 - **Modularity** — each phase is a self-contained Python module with its own data structures.
 - **Rigorous error reporting** — compile-time errors halt early with the exact line, column, and reason.
-- **Test-driven correctness** — 98 automated tests cover all three compiler phases plus the IR interpreter.
+- **Test-driven correctness** — 182 automated tests cover the lexer, parser, semantic analyzer, IR generator, every optimization pass, and native x86-64 execution.
 
 ### Non-Goals
 - Not a replacement for GCC, Clang, or LLVM.
@@ -230,13 +230,13 @@ When making changes to specific phases of the compiler (like the Parser or the I
 - **Semantics** (`src/semantic/`): Modify `analyzer.py` to apply new type checks or scoping rules.
 - **IR Generation** (`src/ir/`): Update `ir_gen.py` and `instructions.py` to alter Three-Address Code generation behavior.
 - **Optimization** (`src/optimization/`): Add or tweak new optimization passes here.
-- **Backend** (`src/backend/`): Adjust the target assembly emission and stack-machine translations in `x86_allocator.py` or `riscv_allocator.py`.
+- **Backend** (`src/backend/`): Adjust the target assembly emission and stack-machine translations in `codegen_x86.py` or `riscv/codegen_riscv.py`.
 
 ---
 
 ## 5. Test Suite
 
-The test suite lives in `tests/unit/` and is run with `pytest`. All 98 tests complete in under 0.2 seconds.
+The test suite lives in `tests/unit/` and is run with `pytest`. All 182 tests complete in a few seconds (the native x86-64 tests are skipped when `nasm`/`gcc` are unavailable).
 
 ### Test Files
 
@@ -283,15 +283,15 @@ python -m pytest --tb=short
 | No switch statement | Use `if/else if/else` chains |
 | No ternary operator | Use `if/else` instead |
 | No function pointers | Functions are not first-class values |
-| Float support minimal | `float` is a keyword but IR/backend treats float literals as int where possible |
+| No `float` or `uint32` | Neither is a keyword; floating-point literals such as `3.14` are a lexical error. `char` is parsed but rejected by the semantic analyzer |
 
 ### Runtime Behaviors
 | Situation | Behavior |
 |---|---|
 | Array out-of-bounds | Undefined behavior — no runtime check |
-| Integer overflow | Undefined behavior — follows Python int semantics in interpreter |
+| Integer overflow | Wraps around (signed 64-bit two's complement); folded constants follow the same rule |
 | Reading uninitialized local | Undefined — gets 0 in IR interpreter by default |
-| Division by zero | Undefined — Python `ZeroDivisionError` in interpreter |
+| Division by zero | Traps at runtime (SIGFPE on x86-64); never constant-folded |
 | Deep recursion | Limited by Python recursion depth in the IR interpreter |
 
 ### Compiler Behaviors

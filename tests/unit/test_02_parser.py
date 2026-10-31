@@ -48,3 +48,8 @@ def test_array_declaration_and_access():
 def test_syntax_error():
     with pytest.raises(Exception, match="Expected"):
         _parse("int x = ;")
+
+def test_const_array_declaration_keeps_const_flag():
+    program = Parser(Lexer("const int a[3]; int b[2]; void main() {}").tokenize()).parse()
+    assert program.declarations[0].is_const is True
+    assert program.declarations[1].is_const is False
