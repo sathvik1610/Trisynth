@@ -3,6 +3,32 @@
 from typing import List, Union
 from src.ir.instructions import Instruction, OpCode
 
+INT64_MIN = -(1 << 63)
+INT64_MAX = (1 << 63) - 1
+
+def _wrap64(value: int) -> int:
+    # Reduces an arbitrary Python int to signed 64-bit two's complement.
+    value &= (1 << 64) - 1
+    return value - (1 << 64) if value > INT64_MAX else value
+
+def _c_div(a: int, b: int) -> int:
+    # Integer division truncating toward zero, like C and idiv (Python's // floors).
+    if b == 0:
+        raise ZeroDivisionError
+    quotient = abs(a) // abs(b)
+    if (a < 0) != (b < 0):
+        quotient = -quotient
+    if not INT64_MIN <= quotient <= INT64_MAX:
+        raise OverflowError   # INT64_MIN / -1 traps on x86, so it is not folded.
+    return quotient
+
+def _shift_count(count: Union[int, float]) -> int:
+    # The CPU masks shift counts to 6 bits, so only fold counts that need no masking.
+    count = int(count)
+    if not 0 <= count < 64:
+        raise ValueError
+    return count
+
 class ConstantFolding:
 \
 \
@@ -134,7 +160,8 @@ class ConstantFolding:
             result = self._compute(instr.opcode, val1, val2)
                                                          
             return Instruction(OpCode.MOV, arg1=result, result=instr.result)
-        except ZeroDivisionError:
+        except (ZeroDivisionError, OverflowError, ValueError):
+            # Leave anything the hardware would trap on or handle specially to runtime.
             return instr
 
     def _is_constant(self, val: Union[str, int, float, None]) -> bool:
@@ -143,15 +170,19 @@ class ConstantFolding:
 
     def _compute(self, opcode: OpCode, v1: Union[int, float], v2: Union[int, float]) -> Union[int, float]:
         # This handles the primary logic for compute operations.
-        if opcode == OpCode.ADD: return v1 + v2
-        elif opcode == OpCode.SUB: return v1 - v2
-        elif opcode == OpCode.MUL: return v1 * v2
+        # Integers follow the machine: signed 64-bit wraparound, division truncating toward zero.
+        both_int = isinstance(v1, int) and isinstance(v2, int)
+        if opcode == OpCode.ADD: return _wrap64(v1 + v2) if both_int else v1 + v2
+        elif opcode == OpCode.SUB: return _wrap64(v1 - v2) if both_int else v1 - v2
+        elif opcode == OpCode.MUL: return _wrap64(v1 * v2) if both_int else v1 * v2
         elif opcode == OpCode.DIV:
-            if isinstance(v1, int) and isinstance(v2, int): return v1 // v2
+            if both_int: return _c_div(v1, v2)
             return v1 / v2
-        elif opcode == OpCode.MOD: return v1 % v2
-        elif opcode == OpCode.LSHIFT: return int(v1) << int(v2)
-        elif opcode == OpCode.RSHIFT: return int(v1) >> int(v2)
+        elif opcode == OpCode.MOD:
+            if both_int: return v1 - v2 * _c_div(v1, v2)
+            return v1 % v2
+        elif opcode == OpCode.LSHIFT: return _wrap64(int(v1) << _shift_count(v2))
+        elif opcode == OpCode.RSHIFT: return int(v1) >> _shift_count(v2)
                                       
         elif opcode == OpCode.LT: return 1 if v1 < v2 else 0
         elif opcode == OpCode.GT: return 1 if v1 > v2 else 0
