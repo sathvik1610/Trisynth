@@ -24,9 +24,11 @@ def test_power_of_two_division():
         Instruction(OpCode.DIV, arg1="x", arg2=4, result="t0")
     ]
     opt = _opt(ir)
-    assert opt[0].opcode == OpCode.RSHIFT
-    assert opt[0].arg1 == "x"
-    assert opt[0].arg2 == 2
+    # Signed division needs a bias for negative dividends, so the shift is the last step.
+    assert opt[-1].opcode == OpCode.RSHIFT
+    assert opt[-1].arg2 == 2
+    assert opt[-1].result == "t0"
+    assert OpCode.DIV not in [i.opcode for i in opt]
 
 def test_zero_identities():
     ir = [
