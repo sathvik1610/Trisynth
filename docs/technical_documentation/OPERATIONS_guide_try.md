@@ -1,4 +1,4 @@
-# NanoC Operations Cheat Sheet
+# Trisynth (NanoC) Operations Cheat Sheet
 
 > **Quick reference for every operation supported by the Trisynth compiler.**
 
@@ -58,7 +58,7 @@ void main() {
 
 ## 3. Logical / Boolean Operations
 
-Operands must be `bool`. Uses **short-circuit evaluation**.
+Operands may be `bool` or `int` (nonzero counts as true); the result is `bool`. Uses **short-circuit evaluation** (the right operand is not evaluated when the left decides the result).
 
 | Operator | Meaning | Example |
 |---|---|---|
@@ -82,36 +82,41 @@ void main() {
 
 ---
 
-## 4. Bitwise / Shift Operations (Optimizer)
+## 4. Shift Operations and Strength Reduction
 
-These are emitted by the **Strength Reduction** optimizer — you write normal arithmetic and the compiler lowers it automatically:
+You can write shifts directly with `<<` and `>>` (they bind looser than `+ -` and tighter than `< >`; for example `1 + 2 << 3` is `(1 + 2) << 3` = 24). There are no bitwise `&`, `|` or `^` operators.
+
+The **Strength Reduction** optimizer also emits shifts for you: you write normal arithmetic and the compiler lowers it automatically:
 
 | Written Code | Compiled IR | Condition |
 |---|---|---|
 | `x * 2` | `x << 1` | power of 2 |
 | `x * 4` | `x << 2` | power of 2 |
 | `x * 8` | `x << 3` | power of 2 |
-| `x / 2` | `(x + (x < 0 ? 1 : 0)) >> 1` | power of 2 (negative dividends get a bias) |
-| `x / 4` | `(x + (x < 0 ? 3 : 0)) >> 2` | power of 2 (negative dividends get a bias) |
+| `x / 2` | `LT n x 0` / `ADD s x n` / `RSHIFT r s 1` | power of 2, non-constant `x` (negative dividends get a bias so the result truncates toward zero) |
+| `x / 4` | `LT n x 0` / `LSHIFT hi n 2` / `SUB b hi n` / `ADD s x b` / `RSHIFT r s 2` | power of 2, non-constant `x` (bias = 3 for negative `x`) |
 | `x * 0` | `0` | zero |
 | `x * 1` | `x` | identity |
+
+`x % 4`, `x * 3` and `x / 3` are not reduced. When every operand is a compile-time constant, the result is simply folded.
 
 ```c
 void main() {
     int x = 3;
-    int a = x * 4;    // compiled: x << 2 = 12
-    int b = x * 8;    // compiled: x << 3 = 24
-    int c = x / 2;    // wait -- x=3, 3/2=1 (integer div, then >> 1 => 1)
+    int a = x * 4;    // strength-reduced to x << 2, then folded: 12
+    int b = x * 8;    // strength-reduced to x << 3, then folded: 24
     print(a);   // 12
     print(b);   // 24
 }
 ```
 
+Because `x` is a known constant here, the final optimized IR is just `PRINT 12` / `PRINT 24`; no shift survives. To see the shifts in the output, use a value that is only known at run time, such as a function parameter or `readInt()`.
+
 ---
 
 ## 5. Increment / Decrement
 
-Pre-increment and pre-decrement only. **Only valid on `int` variables.**
+Pre-increment and pre-decrement only. Valid on `int` variables and on `int` array elements (`++arr[i]`). They are expressions: `int y = ++x;` stores the new value in both `y` and `x`.
 
 | Operator | Desugars to | Effect |
 |---|---|---|
@@ -129,7 +134,7 @@ void main() {
 }
 ```
 
-> ❌ **NOT allowed**: `++arr[0]`, `++(x+1)`, increment on `bool`, increment on `const`.
+> ❌ **NOT allowed**: `++(x+1)`, increment on `bool`, increment on `const`, and postfix `x++` / `x--`.
 
 ---
 
@@ -145,7 +150,7 @@ void main() {
 ```c
 void main() {
     int x = 10;          // declare + assign
-    x = x + 5;          // reassign → 15
+    x = x + 5;          // reassign -> 15
     print(x);           // 15
 
     int arr[3];
@@ -155,7 +160,7 @@ void main() {
 
     const int CAP = 255;
     print(CAP);             // 255
-    // CAP = 300;           ← ERROR: Cannot assign to const
+    // CAP = 300;           <- ERROR: Cannot assign to const
 }
 ```
 
@@ -163,7 +168,10 @@ void main() {
 
 ## 7. Variable Declarations
 
+All variables must be declared **inside a function**. Global variables (including `const` and global arrays) are rejected with `E002 Semantic Error: Global variable '…' is not supported; declare it inside a function.`
+
 ```c
+void main() {
 // Plain declaration (value is undefined until assigned)
 int x;
 bool flag;
@@ -176,9 +184,10 @@ bool active = true;
 const int MAX = 1000;
 const bool DEBUG = false;
 
-// Array (fixed positive size, elements = 0 by default)
+// Array (fixed positive size; elements are uninitialized until assigned)
 int arr[10];
 int buf[1];    // minimum valid size
+}
 ```
 
 ---
@@ -323,7 +332,7 @@ void main() {
 ### Declaration & element access
 ```c
 void main() {
-    int arr[5];      // 5 elements, all 0
+    int arr[5];      // 5 elements, uninitialized until assigned
     arr[0] = 10;
     arr[1] = 20;
     int x = arr[0] + arr[1];
@@ -392,7 +401,8 @@ void main() {
 
 ```c
 void main() {
-    // Output — prints value then newline
+    // Output — print(int/bool) prints the value then a newline (bool prints 1/0);
+    // print(string) prints the text with no newline added
     print(42);
     print(1 + 2 * 3);
 
@@ -410,7 +420,7 @@ The compiler evaluates constant expressions at compile time — zero runtime cos
 
 ```c
 void main() {
-    int a = 3 * 4;          // folded → 12 (no MUL in IR)
+    int a = 3 * 4;          // folded → 12 (no MUL left in the optimized IR)
     int b = 100 - 50 + 10;  // folded → 60
     int c = 2 * 2 * 2 * 2;  // folded → 16
     print(a);   // 12
@@ -425,14 +435,15 @@ void main() {
 
 | Priority | Operator(s) | Type | Associativity |
 |---|---|---|---|
-| 1 (highest) | `!`, `++`, `--` | Unary | Right |
+| 1 (highest) | `!`, unary `-`, `++`, `--` | Unary | Right |
 | 2 | `*`, `/`, `%` | Multiplicative | Left |
 | 3 | `+`, `-` | Additive | Left |
-| 4 | `<`, `>`, `<=`, `>=` | Relational | Left |
-| 5 | `==`, `!=` | Equality | Left |
-| 6 | `&&` | Logical AND | Left |
-| 7 | `\|\|` | Logical OR | Left |
-| 8 (lowest) | `=` | Assignment | Right |
+| 4 | `<<`, `>>` | Shift | Left |
+| 5 | `<`, `>`, `<=`, `>=` | Relational | Left |
+| 6 | `==`, `!=` | Equality | Left |
+| 7 | `&&` | Logical AND | Left |
+| 8 | `\|\|` | Logical OR | Left |
+| 9 (lowest) | `=` | Assignment | Right |
 
 ---
 
@@ -442,22 +453,28 @@ void main() {
 |---|---|
 | Floating point arithmetic | ❌ Not supported (`float` is not a keyword; `3.14` is a lexical error) |
 | Pointers (`*`, `&`) | ❌ Not supported |
-| Strings | ✅ Fully mapped mapping natively evaluating C-style static boundaries loading dynamically! |
+| Strings | ✅ Supported: `string` variables, arrays, parameters and return values, and `print`. `==` / `!=` compare pointers only; no indexing, concatenation or other operators |
 | `switch` / `case` | ❌ Use `if/else if` chain |
 | Ternary `? :` | ❌ Use `if/else` |
 | `while(true)` infinite loop without `break` | ⚠️ Compiles, runs forever |
 | Array as return type | ❌ Return elements individually |
 | Nested arrays `int arr[3][3]` | ❌ Not supported |
 | Post-increment `x++` | ❌ Use `++x` (pre-increment only) |
-| Implicit int↔bool conversion | ❌ Type Error at compile time |
+| Implicit int↔bool conversion | ❌ Type Error in assignments, initializers and call arguments. `if` / `while` conditions and `&&` / `||` operands do accept `int` (nonzero = true); a `for` condition must be `bool` |
 | Dynamic array size `int arr[n]` | ❌ Size must be integer literal |
 | Array out-of-bounds check | ❌ Undefined behavior at runtime |
+| Global variables / global arrays | ❌ Rejected: declare variables inside a function |
+| Nested function declarations | ❌ Rejected (functions must be top-level) |
+| `char` type and `'a'` literals | ❌ `char` is a keyword but rejected by the analyzer (`Unsupported intrinsic type 'char'`); a character literal is lexed but the parser rejects it |
+| `uint32` | ❌ Not a keyword |
+| Bitwise `&`, `\|`, `^` | ❌ Lexical error (only `<<` and `>>` exist) |
+| Modifying a `const` array element | ❌ Semantic error |
 
 ---
 
 ## 18. Native Strings & Character Pointers (Advanced)
 
-Trisynth strictly mimics exact C-layer behaviors natively extracting literal allocations dynamically without external string classes implicitly!
+Trisynth has a `string` type that behaves like a C `char*`: a string variable holds the address of a literal stored in the data section.
 
 ```c
 void main() {
@@ -465,7 +482,7 @@ void main() {
     string msg = "Compiler Running\n";
     print(msg);
     
-    // String arrays allocating pointers sequentially!
+    // String array: each element is a pointer to a literal
     string words[3];
     words[0] = "Apple\n";
     words[1] = "Banana\n";
@@ -473,5 +490,9 @@ void main() {
 }
 ```
 
-- When allocating `words[0] = "Apple"`, Trisynth dynamically registers an embedded `.data` segment literal `str_X`.
-- It then physically extracts the raw 64-bit AMD64/RISC-V pointer mapping cleanly into the `words` stack offset natively mirroring standard C `char*` interactions flawlessly!
+- Each distinct string literal is emitted once into the `.data` section as `str_N`.
+- Assigning `words[0] = "Apple
+"` stores the 64-bit address of that literal into the array slot.
+- `print(string)` writes the text exactly as given (add `
+` yourself for a newline).
+- Elements of a `string` array that were never assigned hold garbage, so do not print them.

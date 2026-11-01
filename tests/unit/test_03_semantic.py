@@ -9,7 +9,7 @@ def _analyze(code):
     analyzer.analyze(ast)
 
 def test_valid_program():
-    code = "int x = 10; int get_x() { return x; } void main() {}"
+    code = "int get_x() { int x = 10; return x; } void main() {}"
     _analyze(code)  # Should not raise
 
 def test_undeclared_variable():
@@ -46,4 +46,9 @@ def test_const_array_can_be_read():
 def test_float_and_uint32_are_not_types():
     for code in ("void main() { float f; }", "void main() { uint32 u; }"):
         with pytest.raises(Exception):
+            _analyze(code)
+
+def test_global_variables_rejected_with_clear_error():
+    for code in ("int g = 5; void main() {}", "const int N = 10; void main() {}", "int a[3]; void main() {}"):
+        with pytest.raises(Exception, match="Global variable .* not supported"):
             _analyze(code)

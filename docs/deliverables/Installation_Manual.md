@@ -1,102 +1,113 @@
 # Trisynth Compiler — Installation Guide
 
-Trisynth ships as a **self-contained binary**. No Python installation required.
+There are two ways to run Trisynth:
+
+1. **From source (recommended)** — needs Python 3, NASM and GCC. This always runs the latest code.
+2. **Prebuilt binary** — the zips in `releases/` contain a PyInstaller build and need no Python. They are a snapshot from **14 April 2026** and do not include later source changes.
 
 ---
 
-## 📦 Which release do I download?
+## From source
 
-| Your System | Download |
+### Linux or Windows WSL
+
+```bash
+sudo apt update && sudo apt install -y git python3 gcc nasm
+git clone https://github.com/sathvik1610/Trisynth.git ~/Trisynth
+cd ~/Trisynth
+python3 src/main.py tests/FinalDemo/1_fibonacci.tri
+```
+
+Expected output: `Fibonacci of 10 is:55`
+
+Cloning into your Linux home directory is recommended (faster, and avoids permission problems with bundled binaries). Running from a Windows-mounted path such as `/mnt/d/...` also works when `nasm` and `gcc` are installed inside WSL.
+
+### Windows PowerShell with WSL
+
+With Python installed on Windows and `nasm` + `gcc` installed inside WSL, run from PowerShell:
+
+```powershell
+python src\main.py tests\FinalDemo\1_fibonacci.tri
+```
+
+The compiler detects `wsl nasm` and assembles, links and runs inside WSL. The detection has a 5-second timeout; if you see `No assembler toolchain found`, run `wsl -e true` once and try again.
+
+### Windows native (no WSL)
+
+`nasm` **and** `gcc` (for example MinGW-w64) must both be on your `PATH`. The compiler looks them up by name; it does not search the `bin\windows` folder that `setup.bat` creates, so add that folder to `PATH` if you use the portable NASM it downloads. RISC-V execution is not available on native Windows.
+
+### RISC-V (Linux or WSL only)
+
+```bash
+sudo apt install qemu-user gcc-riscv64-linux-gnu
+python3 src/main.py tests/FinalDemo/1_fibonacci.tri --arch riscv
+```
+
+---
+
+## Prebuilt binaries (`releases/`)
+
+| Your system | Download |
 |---|---|
-| Linux (Ubuntu, Debian, etc.) | `Trisynth-Linux.zip` |
+| Linux | `Trisynth-Linux.zip` |
 | Windows with WSL | `Trisynth-Windows-WSL.zip` |
-| Windows (native, no WSL) | `Trisynth-Windows-Native.zip` |
+| Windows native | `Trisynth-Windows-Native.zip` |
 
----
-
-## 🐧 Linux
+**Linux / WSL** — extract into your Linux home directory (not a Windows-mounted path), then run the setup script:
 
 ```bash
 unzip Trisynth-Linux.zip -d ~/Trisynth
 cd ~/Trisynth
 bash setup.sh
-```
-
-> ⚠️ **Important:** Extract into your **home directory** (e.g. `~/Trisynth`), not a Windows-mounted path like `/mnt/c/...`.  
-> The setup script needs Linux filesystem permissions to work correctly.
-
-What `setup.sh` does:
-- Checks for `gcc` (required for linking)
-- Uses the pre-bundled `bin/linux/nasm` assembler (no download needed)
-- Sets execute permissions on `trisynth` and `nasm`
-
-Run your first program:
-```bash
 ./trisynth demo2_strength_reduction.tri
 ```
 
----
+`setup.sh` checks for `gcc`, checks for a system `nasm` (if there is none and `bin/linux/nasm` is also missing it builds NASM from source), and makes `trisynth` and `bin/linux/nasm` executable.
 
-## 🪟 Windows WSL (Recommended for Windows)
-
-1. Open your **WSL terminal** (Ubuntu, Debian, etc.)
-2. Extract into your Linux home directory — **not** `/mnt/c/...`:
-
-```bash
-# From inside WSL:
-cd ~
-unzip /mnt/c/Users/<YourName>/Downloads/Trisynth-Windows-WSL.zip -d Trisynth
-cd Trisynth
-bash setup.sh
-./trisynth demo2_strength_reduction.tri
-```
-
-> ⚠️ **Do not run from `/mnt/c/...`** — Windows-mounted filesystems block the `chmod` and file permission operations that the setup needs.
-
----
-
-## 🪟 Windows Native (No WSL)
-
-1. Unzip `Trisynth-Windows-Native.zip`
-2. Double-click `setup.bat` (or right-click → **Run as Administrator**)
-3. Run:
+**Windows native**
 
 ```cmd
+setup.bat
 trisynth.exe demo2_strength_reduction.tri
 ```
 
-> ⚠️ RISC-V compilation (`--arch riscv`) is **not available** on native Windows. Use WSL for full support.
+`setup.bat` checks for `gcc` (warning only) and downloads a portable NASM into `bin\windows\` if no `nasm` is on `PATH`.
 
 ---
 
-## 🚩 All Available Flags
+## Flags
 
 ```
-./trisynth file.tri [FLAGS]
+python3 src/main.py <file.tri> [FLAGS]      # from source
+./trisynth <file.tri> [FLAGS]               # prebuilt binary
 ```
 
 | Flag | Description |
 |---|---|
-| *(none)* | Compile and run (default) |
-| `-v` / `--verbose` | Print all compilation phases in detail |
+| *(none)* | Compile, assemble, link and run (x86-64) |
+| `-v` / `--verbose` | Print all compilation phases, then run |
 | `--tokens` | Print lexer tokens and stop |
-| `--ast` | Print Abstract Syntax Tree and stop |
-| `--ir` | Print IR + all optimization passes and stop |
-| `--asm` | Print generated x86-64 assembly and stop |
+| `--ast` | Print the Abstract Syntax Tree and stop |
+| `--ir` | Print the IR and the IR after each optimization pass, then stop |
+| `--asm` | Print the generated assembly for the selected `--arch` and stop |
 | `--arch x86` | Target x86-64 (default) |
-| `--arch riscv` | Target RISC-V 64-bit (Linux/WSL only) |
-| `--arch both` | Compile for both architectures |
-| `--compare-asm` | Show x86-64 and RISC-V assembly side by side |
-| `--benchmark` | Compile and benchmark x86 vs RISC-V (QEMU) |
-| `--demo` | Interactive REPL mode |
+| `--arch riscv` | Target RISC-V 64-bit (Linux/WSL, needs `riscv64-linux-gnu-gcc` and `qemu-riscv64`) |
+| `--arch both` | Run both targets |
+| `--compare-asm` | Print the x86-64 and RISC-V assembly and stop |
+| `--benchmark` | Run x86-64 natively and RISC-V under QEMU and compare timings |
+| `--demo` | Read source from standard input and compile it (also used when no file is given) |
+
+Only files ending in `.tri` are accepted. Every successful compile writes `output.asm` and `output_riscv.s` (and a normal run also `output.o` and `program` / `program.exe`) into the **current directory**.
 
 ---
 
-## ✅ Verifying Your Installation
+## Verifying your installation
 
 ```bash
-./trisynth demo4_array.tri
-# Expected output: numbers printed to terminal, no errors
+python3 src/main.py tests/FinalDemo/4_array_sum.tri
+# Expected: Sum of array elements is:210
+python3 -m pytest tests -q
+# Expected: 186 passed (the native x86-64 tests are skipped without nasm/gcc)
 ```
 
 
@@ -104,47 +115,43 @@ trisynth.exe demo2_strength_reduction.tri
 
 # Trisynth Compiler — Setup Guide
 
-Quick reference for getting Trisynth running on your system.
+Quick reference for getting Trisynth running. See [INSTALL.md](INSTALL.md) for details.
 
 ---
 
-## Linux
+## From source (recommended)
 
 ```bash
-unzip Trisynth-Linux.zip -d ~/Trisynth
-cd ~/Trisynth
-bash setup.sh
-./trisynth file.tri
+sudo apt install -y python3 gcc nasm        # Linux or inside WSL
+python3 src/main.py file.tri
 ```
 
+On Windows with WSL you can run `python src\main.py file.tri` from PowerShell; the compiler uses WSL's `nasm` and `gcc` automatically.
+
 ---
 
-## Windows WSL
+## Prebuilt binary (snapshot from 14 April 2026)
 
-> ⚠️ **Must extract to your Linux home directory** — NOT `/mnt/c/...`
+### Linux / Windows WSL
+
+Extract into your Linux home directory (not `/mnt/c/...`):
 
 ```bash
-# Inside WSL terminal:
 cd ~
-unzip /mnt/c/Users/<YourName>/Downloads/Trisynth-Windows-WSL.zip -d Trisynth
+unzip /mnt/c/Users/<YourName>/Downloads/Trisynth-Linux.zip -d Trisynth
 cd Trisynth
 bash setup.sh
 ./trisynth file.tri
 ```
 
-Full RISC-V support is available on WSL.
-
----
-
-## Windows Native
-
-Double-click `setup.bat`, then:
+### Windows native
 
 ```cmd
+setup.bat
 trisynth.exe file.tri
 ```
 
-> ⚠️ RISC-V (`--arch riscv`) is not supported on native Windows.
+RISC-V (`--arch riscv`) is not available on native Windows. On native Windows the compiler needs `nasm` and `gcc` on `PATH`.
 
 ---
 
@@ -153,10 +160,10 @@ trisynth.exe file.tri
 | Step | Action |
 |---|---|
 | Check gcc | Verifies the linker is available |
-| nasm | Uses the pre-bundled `bin/linux/nasm` (no internet needed) |
+| nasm | Uses a system `nasm` if present; otherwise uses (or builds) `bin/linux/nasm` |
 | Permissions | Runs `chmod +x` on `trisynth` and `bin/linux/nasm` |
 
-Setup is **idempotent** — safe to run multiple times.
+Setup is safe to run multiple times.
 
 ---
 
@@ -164,15 +171,17 @@ Setup is **idempotent** — safe to run multiple times.
 
 | Platform | Requirements |
 |---|---|
-| Linux / WSL | `gcc` (`sudo apt install build-essential`) |
-| Windows Native | None — `setup.bat` handles everything |
+| Linux / WSL | `gcc` and `nasm` (`sudo apt install gcc nasm`); Python 3 when running from source |
+| Windows native | `nasm` and `gcc` (MinGW-w64) on `PATH` |
 
 ---
 
-## Demo Files Included
+## Demo files
 
 | File | What it demonstrates |
 |---|---|
-| `demo1_dead_code.tri` | Dead code elimination optimization |
-| `demo2_strength_reduction.tri` | Strength reduction (multiply → shift) |
-| `demo4_array.tri` | Array declaration and access |
+| `tests/demo1_dead_code.tri` | Dead code elimination |
+| `tests/demo2_strength_reduction.tri` | Strength reduction (multiply → shift) |
+| `tests/demo4_array.tri` | Array declaration and access |
+
+The release zips ship these three files in their root folder; from a source checkout they are in `tests/`. More demos are in `tests/FinalDemo/` and `tests/demo*.tri`.

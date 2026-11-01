@@ -82,9 +82,11 @@ class SemanticAnalyzer:
                 self.current_function = prev_func
                 self.symbol_table.exit_scope()
             else:
-                self.visit(decl)
+                # Globals are not lowered by the backends (each function would get its own stack slot).
+                raise Exception(f"E002 Semantic Error: Global variable '{decl.name}' is not supported; "
+                                f"declare it inside a function.")
 
-                                           
+
         if not self.symbol_table.resolve('main'):
             raise Exception("E004 Semantic Error: Program is missing required entry point 'main' function.")
 
