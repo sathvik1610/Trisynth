@@ -61,13 +61,6 @@ class Parser:
     
                                      
 
-    def parse_primary(self) -> ast.Expr:
-                                                   
-        # This handles the primary logic for parse primary operations.
-        if self._match(TokenType.INTEGER):
-            return ast.Literal(int(self.tokens[self.pos-1].value), "int")
-
-
     def _consume(self, type: TokenType, message: str) -> Token:
 \
 \
@@ -95,11 +88,11 @@ class Parser:
         # This handles the primary logic for parse operations.
         declarations = []
         while not self._check(TokenType.EOF):
-            declarations.append(self.parse_declaration())
+            declarations.append(self.parse_declaration(top_level=True))
         return ast.Program(declarations)
 
 
-    def parse_declaration(self) -> ast.Stmt:
+    def parse_declaration(self, top_level: bool = False) -> ast.Stmt:
 \
 \
            
@@ -123,6 +116,9 @@ class Parser:
 
                                               
         if self._check(TokenType.LPAREN):
+            if not top_level:
+                raise Exception(f"Syntax Error at {name_token.line}:{name_token.column}: "
+                                f"Function '{name_str}' cannot be declared inside another function or block.")
             if is_const:
                 raise Exception("Functions cannot be const.")
             return self.parse_function_decl(type_str, name_str)
@@ -453,9 +449,11 @@ class Parser:
         
                                     
         if self._check(TokenType.LPAREN):
+            if not isinstance(expr, ast.Variable):
+                raise Exception(f"Syntax Error at {self._current().line}:{self._current().column}: "
+                                f"Only a function name can be called.")
             self._consume(TokenType.LPAREN, "Expected '(' after function name.")
-            if isinstance(expr, ast.Variable):
-                return self._finish_call(expr)
+            return self._finish_call(expr)
                                                                      
 
                                    

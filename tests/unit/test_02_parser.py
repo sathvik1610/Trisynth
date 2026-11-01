@@ -53,3 +53,18 @@ def test_const_array_declaration_keeps_const_flag():
     program = Parser(Lexer("const int a[3]; int b[2]; void main() {}").tokenize()).parse()
     assert program.declarations[0].is_const is True
     assert program.declarations[1].is_const is False
+
+def test_nested_function_declaration_rejected():
+    for code in ("void main() { void helper() { print(1); } helper(); }",
+                 "void main() { int f() { return 1; } print(f()); }",
+                 "void main() { if (true) { int g() { return 2; } } }"):
+        with pytest.raises(Exception, match="cannot be declared inside"):
+            _parse(code)
+
+def test_top_level_functions_and_local_variables_still_parse():
+    program = _parse("int f() { return 1; } void main() { int x = f(); }")
+    assert len(program.declarations) == 2
+
+def test_calling_a_non_function_gives_clear_error():
+    with pytest.raises(Exception, match="Only a function name can be called"):
+        _parse("void main() { int x = 5 (3); }")
