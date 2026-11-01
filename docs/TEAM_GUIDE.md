@@ -56,7 +56,7 @@ Welcome to the Trisynth internal guide. This document breaks down the compiler's
 
 ## 6. Code Generation (The Backends)
 **Goal:** Translate the optimized IR into native physical hardware instructions for x86-64 and RISC-V.
-**Files:** `src/backend/codegen.py` and `codegen_riscv.py`
+**Files:** `src/backend/codegen_x86.py` and `src/backend/riscv/codegen_riscv.py`
 
 *   **How it works:** It acts as a **Stack Machine**. We don't implement complex Register Graph Coloring. Instead, practically everything is allocated onto the physical memory stack structure securely.
 *   **Concepts to explain:**

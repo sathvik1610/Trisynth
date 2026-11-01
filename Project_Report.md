@@ -127,8 +127,8 @@ The keyword dictionary maps reserved words (e.g., `if`, `while`, `const`, `strin
 
 | Category | Examples |
 |---|---|
-| Literals | `INTEGER`, `FLOAT`, `STRING`, `CHAR` |
-| Keywords (types) | `KW_INT`, `KW_UINT32`, `KW_BOOL`, `KW_STRING`, `KW_VOID`, `KW_CONST` |
+| Literals | `INTEGER`, `STRING`, `CHAR` |
+| Keywords (types) | `KW_INT`, `KW_BOOL`, `KW_STRING`, `KW_VOID`, `KW_CONST` |
 | Keywords (control) | `KW_IF`, `KW_ELSE`, `KW_WHILE`, `KW_FOR`, `KW_BREAK`, `KW_CONTINUE`, `KW_RETURN` |
 | Keywords (I/O) | `KW_PRINT`, `KW_READ_INT`, `KW_TRUE`, `KW_FALSE` |
 | Arithmetic | `PLUS`, `MINUS`, `STAR`, `SLASH`, `MODULO`, `LSHIFT`, `RSHIFT` |
@@ -233,7 +233,7 @@ Five optimization passes are applied to the IR list after generation and before 
 
 **Pass 4 — Dead Code Elimination (`dead_code.py`).** Marks temporaries that are never used as operands and removes the instructions that produce them. Also removes unreachable instructions following an unconditional `JMP` up to the next `LABEL`.
 
-**Pass 5 — Strength Reduction (`strength_reduction.py`).** Replaces computationally expensive operations with cheaper equivalents; for instance, multiplication or division by a compile-time power-of-two is converted to a left or right arithmetic shift.
+**Pass 5 — Strength Reduction (`strength_reduction.py`).** Replaces computationally expensive operations with cheaper equivalents; for instance, multiplication by a compile-time power-of-two is converted to a left shift, and signed division by a power of two to a right shift preceded by a bias for negative dividends so that the result still truncates toward zero.
 
 ### 5.6 Code Generation (x86-64)
 
@@ -312,12 +312,13 @@ Trisynth enforces a static, nominal type system at compile time. The types avail
 | Type | Description |
 |---|---|
 | `int` | 64-bit signed integer |
-| `uint32` | 32-bit unsigned integer (parsed; back-end treated as 64-bit) |
 | `bool` | Boolean (`true` / `false`); relational expressions yield `bool` |
 | `string` | Immutable character pointer to a data-section literal |
 | `const` | Qualifier applicable to any scalar or array |
 
-The types `float` and `char` are recognized by the lexer and parser but are rejected at the semantic stage with an `E002 Semantic Error`, indicating they are not yet structurally supported by the back-end.
+The type `char` is recognized by the lexer and parser but is rejected at the semantic stage with an `E002 Semantic Error`, indicating it is not yet structurally supported by the back-end. `float` and `uint32` are not part of the language: they are ordinary identifiers and floating-point literals are a lexical error.
+
+`int` is a signed 64-bit two's-complement integer. `+`, `-`, `*` and `<<` wrap around on overflow, `/` and `%` truncate toward zero (so `-7 / 2` is `-3` and `-7 % 3` is `-1`), and `>>` is an arithmetic shift. The optimizer preserves these semantics: constant folding emulates them, and division by a power of two is reduced to a shift only together with a correction for negative dividends. Division by zero (and `INT64_MIN / -1`) traps at runtime and is never folded.
 
 ### 6.6 Constants
 
@@ -453,7 +454,7 @@ The Trisynth compiler demonstrates that a complete, industrially structured comp
 
 ## 10. Future Work
 
-- **`float` and `char` type back-end support.** These types are already parsed and recognized lexically; completing their IR-to-assembly lowering would extend the language's expressiveness.
+- **`float` and `char` types.** `char` is already parsed but rejected by the semantic analyzer; `float` does not exist yet. Adding them end to end (lexing, type checking, IR and assembly lowering) would extend the language's expressiveness.
 - **RISC-V back-end completion.** A partial RISC-V code generator (`output_riscv.s`) exists; completing this target would make Trisynth portable to embedded RISC-V platforms.
 - **Register allocation.** The current code generator places all temporaries on the stack. Implementing live-range analysis and a graph-coloring register allocator would significantly improve runtime performance.
 - **Struct and record types.** Adding composite data types would bridge the gap between Trisynth and production systems languages.

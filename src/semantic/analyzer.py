@@ -91,7 +91,7 @@ class SemanticAnalyzer:
     def visit_VarDecl(self, node: ast.VarDecl):
                                                                           
         # This specifically parses and processes VarDecl structures.
-        if node.type_name in ('float', 'char'):
+        if node.type_name in ('char',):
             raise Exception(f"E002 Semantic Error: Unsupported intrinsic type '{node.type_name}' for variable '{node.name}'.")
 
                                                
@@ -195,7 +195,7 @@ class SemanticAnalyzer:
 
     def visit_Literal(self, node: ast.Literal) -> str:
         # This specifically parses and processes Literal structures.
-        if node.type_name in ('float', 'char'):
+        if node.type_name in ('char',):
              raise Exception(f"E002 Semantic Error: Literal type '{node.type_name}' is not structurally supported by the backend emission.")
         return node.type_name
 
@@ -303,7 +303,7 @@ class SemanticAnalyzer:
                                                             
         # This specifically parses and processes ArrayDecl structures.
         array_type = node.type_name + "[]"
-        self.symbol_table.define(node.name, array_type, category='variable')
+        self.symbol_table.define(node.name, array_type, category='variable', is_const=node.is_const)
 
     def visit_ArrayAccess(self, node: ast.ArrayAccess) -> str:
         # This specifically parses and processes ArrayAccess structures.

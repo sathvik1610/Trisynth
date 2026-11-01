@@ -159,11 +159,11 @@ print(welcome); // Maps to [rel str_0] dynamically
 ```
 
 ### 5.4 Unsupported Type Hard-Block
-`float` and `char` syntaxes intentionally trigger hard `E002` violations specifically intercepted by the Semantic analyzer. These bounds protect underlying X86 `imul`/base registers from unpredictable ASM crashes.
+`char` declarations intentionally trigger a hard `E002` violation intercepted by the Semantic analyzer. `float` and `uint32` are not part of the language: they are ordinary identifiers, and floating-point literals such as `3.14` are a lexical error. These bounds protect underlying X86 `imul`/base registers from unpredictable ASM crashes.
 
 ```c
-float pi = 3.14; 
-// ❌ E002: Semantic Error: Unsupported intrinsic type 'float'
+char c = 'a'; 
+// ❌ E002: Semantic Error: Unsupported intrinsic type 'char'
 ```
 
 ### 5.5 Precise Type Checking Rules

@@ -91,8 +91,8 @@ These are emitted by the **Strength Reduction** optimizer — you write normal a
 | `x * 2` | `x << 1` | power of 2 |
 | `x * 4` | `x << 2` | power of 2 |
 | `x * 8` | `x << 3` | power of 2 |
-| `x / 2` | `x >> 1` | power of 2 |
-| `x / 4` | `x >> 2` | power of 2 |
+| `x / 2` | `(x + (x < 0 ? 1 : 0)) >> 1` | power of 2 (negative dividends get a bias) |
+| `x / 4` | `(x + (x < 0 ? 3 : 0)) >> 2` | power of 2 (negative dividends get a bias) |
 | `x * 0` | `0` | zero |
 | `x * 1` | `x` | identity |
 
@@ -440,7 +440,7 @@ void main() {
 
 | Feature | Status |
 |---|---|
-| Floating point arithmetic | ❌ Lexed but not fully executed |
+| Floating point arithmetic | ❌ Not supported (`float` is not a keyword; `3.14` is a lexical error) |
 | Pointers (`*`, `&`) | ❌ Not supported |
 | Strings | ✅ Fully mapped mapping natively evaluating C-style static boundaries loading dynamically! |
 | `switch` / `case` | ❌ Use `if/else if` chain |

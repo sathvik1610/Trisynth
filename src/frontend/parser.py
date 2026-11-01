@@ -61,13 +61,6 @@ class Parser:
     
                                      
 
-    def parse_primary(self) -> ast.Expr:
-                                                   
-        # This handles the primary logic for parse primary operations.
-        if self._match(TokenType.INTEGER):
-            return ast.Literal(int(self.tokens[self.pos-1].value), "int")
-
-
     def _consume(self, type: TokenType, message: str) -> Token:
 \
 \
@@ -95,11 +88,11 @@ class Parser:
         # This handles the primary logic for parse operations.
         declarations = []
         while not self._check(TokenType.EOF):
-            declarations.append(self.parse_declaration())
+            declarations.append(self.parse_declaration(top_level=True))
         return ast.Program(declarations)
 
 
-    def parse_declaration(self) -> ast.Stmt:
+    def parse_declaration(self, top_level: bool = False) -> ast.Stmt:
 \
 \
            
@@ -110,7 +103,7 @@ class Parser:
 
                     
         type_token = self._current()
-        if type_token.type not in (TokenType.KW_INT, TokenType.KW_UINT32, TokenType.KW_FLOAT, 
+        if type_token.type not in (TokenType.KW_INT, 
                                    TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID, TokenType.KW_STRING):
              raise Exception(f"Expected type declaration at {type_token.line}:{type_token.column}")
         
@@ -123,6 +116,9 @@ class Parser:
 
                                               
         if self._check(TokenType.LPAREN):
+            if not top_level:
+                raise Exception(f"Syntax Error at {name_token.line}:{name_token.column}: "
+                                f"Function '{name_str}' cannot be declared inside another function or block.")
             if is_const:
                 raise Exception("Functions cannot be const.")
             return self.parse_function_decl(type_str, name_str)
@@ -147,7 +143,7 @@ class Parser:
                 raise Exception(f"Array size must be a positive integer at {size_token.line}:{size_token.column}")
             self._consume(TokenType.RBRACKET, "Expected ']' after array size.")
             self._consume(TokenType.SEMICOLON, "Expected ';' after array declaration.")
-            return ast.ArrayDecl(type_str, name_str, size)
+            return ast.ArrayDecl(type_str, name_str, size, is_const)
 
         initializer = None
         if self._match(TokenType.ASSIGN):
@@ -170,7 +166,7 @@ class Parser:
             while True:
                             
                 pt_token = self._current()
-                if pt_token.type not in (TokenType.KW_INT, TokenType.KW_UINT32, TokenType.KW_FLOAT, 
+                if pt_token.type not in (TokenType.KW_INT, 
                                    TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID, TokenType.KW_STRING):
                      raise Exception(f"Expected parameter type at {pt_token.line}:{pt_token.column}")
                 pt_str = pt_token.value
@@ -231,7 +227,7 @@ class Parser:
                                                      
                                     
         current_type = self._current().type
-        if current_type in (TokenType.KW_INT, TokenType.KW_UINT32, TokenType.KW_FLOAT, 
+        if current_type in (TokenType.KW_INT, 
                             TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID,
                             TokenType.KW_CONST, TokenType.KW_STRING):
              return self.parse_declaration()                        
@@ -248,7 +244,7 @@ class Parser:
         if not self._match(TokenType.SEMICOLON):
                                    
             current_type = self._current().type
-            if current_type in (TokenType.KW_INT, TokenType.KW_UINT32, TokenType.KW_FLOAT,
+            if current_type in (TokenType.KW_INT, 
                                 TokenType.KW_BOOL, TokenType.KW_CHAR, TokenType.KW_VOID, TokenType.KW_STRING):
                  init = self.parse_declaration()                     
             else:
@@ -453,9 +449,11 @@ class Parser:
         
                                     
         if self._check(TokenType.LPAREN):
+            if not isinstance(expr, ast.Variable):
+                raise Exception(f"Syntax Error at {self._current().line}:{self._current().column}: "
+                                f"Only a function name can be called.")
             self._consume(TokenType.LPAREN, "Expected '(' after function name.")
-            if isinstance(expr, ast.Variable):
-                return self._finish_call(expr)
+            return self._finish_call(expr)
                                                                      
 
                                    
@@ -487,8 +485,6 @@ class Parser:
         # This handles the primary logic for parse primary operations.
         if self._match(TokenType.INTEGER):
             return ast.Literal(int(self.tokens[self.pos-1].value), "int")
-        if self._match(TokenType.FLOAT):
-            return ast.Literal(float(self.tokens[self.pos-1].value), "float")
         if self._match(TokenType.STRING):
             return ast.StringLiteral(self.tokens[self.pos-1].value)
         if self._match(TokenType.KW_TRUE):

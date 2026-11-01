@@ -8,15 +8,12 @@ class TokenType(Enum):
        
                       
     INTEGER = auto()             
-    FLOAT = auto()                 
     IDENTIFIER = auto()                    
     STRING = auto()                           
     CHAR = auto()                
 
                               
     KW_INT = auto()              
-    KW_UINT32 = auto()              
-    KW_FLOAT = auto()              
     KW_BOOL = auto()              
     KW_CHAR = auto()              
     KW_VOID = auto()              

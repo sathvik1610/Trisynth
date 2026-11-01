@@ -316,15 +316,17 @@ class ArrayDecl(Stmt):
 \
 \
        
-    def __init__(self, type_name: str, name: str, size: int):
+    def __init__(self, type_name: str, name: str, size: int, is_const: bool = False):
         # This initializes the base properties.
         self.type_name = type_name
         self.name = name
         self.size = size
+        self.is_const = is_const
 
     def __repr__(self):
         # This handles the primary logic for repr operations.
-        return f"ArrayDecl({self.type_name} {self.name}[{self.size}])"
+        const_str = "const " if self.is_const else ""
+        return f"ArrayDecl({const_str}{self.type_name} {self.name}[{self.size}])"
 
 class FunctionDecl(Stmt):
 \

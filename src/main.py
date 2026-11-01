@@ -116,7 +116,8 @@ class ASTPrinter:
             if node.initializer:
                 children = [node.initializer]
         elif isinstance(node, ast.ArrayDecl):
-            attrs.append(f"{node.type_name} {node.name}[{node.size}]")
+            const_str = "const " if node.is_const else ""
+            attrs.append(f"{const_str}{node.type_name} {node.name}[{node.size}]")
         elif isinstance(node, ast.Block):
             children = node.statements
         elif isinstance(node, ast.IfStmt):

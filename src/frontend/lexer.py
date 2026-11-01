@@ -101,8 +101,6 @@ class Lexer:
                                              
         keywords = {
             "int": TokenType.KW_INT,
-            "uint32": TokenType.KW_UINT32,
-            "float": TokenType.KW_FLOAT,
             "bool": TokenType.KW_BOOL,
             "char": TokenType.KW_CHAR,
             "void": TokenType.KW_VOID,
@@ -134,7 +132,6 @@ class Lexer:
             (r'/\*.*?\*/', None),                                                        
 
                               
-            (r'\d+\.\d+', TokenType.FLOAT),
             (r'\d+', TokenType.INTEGER),
 
                                      

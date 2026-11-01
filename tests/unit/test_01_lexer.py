@@ -44,3 +44,12 @@ def test_invalid_char():
     lexer = Lexer("int x = 5 @ 2;")
     with pytest.raises(Exception, match="Lexical Error"):
         lexer.tokenize()
+
+def test_float_and_uint32_are_plain_identifiers():
+    tokens = Lexer("float uint32").tokenize()
+    assert tokens[0].type == TokenType.IDENTIFIER and tokens[0].value == "float"
+    assert tokens[1].type == TokenType.IDENTIFIER and tokens[1].value == "uint32"
+
+def test_float_literal_is_a_lexical_error():
+    with pytest.raises(Exception, match="Lexical Error"):
+        Lexer("1.5").tokenize()
